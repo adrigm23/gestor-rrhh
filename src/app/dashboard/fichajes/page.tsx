@@ -1,3 +1,4 @@
+import { Prisma, TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
@@ -21,7 +22,7 @@ const formatDuration = (entrada: Date, salida?: Date | null) => {
   return `${padded(hours)}:${padded(minutes)} Hrs`;
 };
 
-const formatTipo = (tipo: string) => {
+const formatTipo = (tipo: TipoFichaje) => {
   switch (tipo) {
     case "PAUSA_COMIDA":
       return "Pausa comida";
@@ -32,6 +33,13 @@ const formatTipo = (tipo: string) => {
     default:
       return "Jornada";
   }
+};
+
+const toTipoFichaje = (value: string) => {
+  const allowed: TipoFichaje[] = ["JORNADA", "PAUSA_COMIDA", "DESCANSO", "MEDICO"];
+  return allowed.includes(value as TipoFichaje)
+    ? (value as TipoFichaje)
+    : undefined;
 };
 
 export default async function FichajesPage({
@@ -109,13 +117,7 @@ export default async function FichajesPage({
 
   const canQuery = !!empresaFiltro;
 
-  const whereClause: {
-    usuario?: { empresaId?: string };
-    usuarioId?: string;
-    entrada?: { gte?: Date; lte?: Date };
-    salida?: { equals?: null | Date; not?: null };
-    tipo?: string;
-  } = {};
+  const whereClause: Prisma.FichajeWhereInput = {};
 
   if (canQuery) {
     whereClause.usuario = { empresaId: empresaFiltro };
@@ -139,10 +141,25 @@ export default async function FichajesPage({
   }
 
   if (tipoParam !== "todos") {
-    whereClause.tipo = tipoParam;
+    const tipo = toTipoFichaje(tipoParam);
+    if (tipo) {
+      whereClause.tipo = tipo;
+    }
   }
 
-  const fichajes = canQuery
+  type FichajeConUsuario = Prisma.FichajeGetPayload<{
+    include: {
+      usuario: {
+        select: {
+          nombre: true;
+          email: true;
+          empresa: { select: { nombre: true } };
+        };
+      };
+    };
+  }>;
+
+  const fichajes: FichajeConUsuario[] = canQuery
     ? await prisma.fichaje.findMany({
         where: whereClause,
         include: {

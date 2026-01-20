@@ -1,3 +1,4 @@
+import { EstadoSolicitud, Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
@@ -28,17 +29,28 @@ export default async function VacacionesAusenciasPage() {
         )?.empresaId ?? null
       : null;
 
-  const whereClause =
+  const whereClause: Prisma.SolicitudWhereInput =
     role === "ADMIN_SISTEMA"
-      ? { estado: "PENDIENTE" }
+      ? { estado: EstadoSolicitud.PENDIENTE }
       : gerenteEmpresaId
         ? {
-            estado: "PENDIENTE",
+            estado: EstadoSolicitud.PENDIENTE,
             usuario: { empresaId: gerenteEmpresaId },
           }
-        : { estado: "PENDIENTE", usuarioId: "__none__" };
+        : { estado: EstadoSolicitud.PENDIENTE, usuarioId: "__none__" };
 
-  const solicitudes = await prisma.solicitud.findMany({
+  type SolicitudConUsuario = Prisma.SolicitudGetPayload<{
+    include: {
+      usuario: {
+        select: {
+          nombre: true;
+          email: true;
+        };
+      };
+    };
+  }>;
+
+  const solicitudes: SolicitudConUsuario[] = await prisma.solicitud.findMany({
     where: whereClause,
     include: {
       usuario: {
