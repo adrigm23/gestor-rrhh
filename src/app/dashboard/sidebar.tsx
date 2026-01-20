@@ -14,6 +14,8 @@ import {
   Building2,
   MapPin,
   Settings,
+  Menu,
+  X,
 } from "lucide-react";
 
 type NavItem = {
@@ -61,9 +63,17 @@ const isActiveLink = (pathname: string, href: string) => {
 
 type SidebarProps = {
   role?: string;
+  mobileOpen?: boolean;
+  onOpen?: () => void;
+  onClose?: () => void;
 };
 
-export default function Sidebar({ role }: SidebarProps) {
+export default function Sidebar({
+  role,
+  mobileOpen = false,
+  onOpen,
+  onClose,
+}: SidebarProps) {
   const pathname = usePathname();
   const isEmpleado = role === "EMPLEADO";
 
@@ -87,50 +97,236 @@ export default function Sidebar({ role }: SidebarProps) {
     );
   };
 
+  const renderMobileLink = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = isActiveLink(pathname, item.href);
+
+    return (
+      <Link
+        key={item.label}
+        href={item.href}
+        onClick={onClose}
+        className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium transition ${
+          active ? "text-white" : "text-white/60"
+        }`}
+      >
+        <Icon size={20} />
+        <span className="text-[10px]">{item.label}</span>
+      </Link>
+    );
+  };
+
   return (
-    <aside className="w-full bg-[#1f1b4d] text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)] md:w-64 md:shrink-0 md:sticky md:top-0 md:h-screen md:overflow-y-auto">
-      <div className="flex items-center gap-3 border-b border-white/10 px-6 py-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
-          <span className="text-2xl font-black text-[#5b21b6]">SD</span>
+    <>
+      <aside className="hidden w-full bg-[#1f1b4d] text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
+        <div className="flex items-center gap-3 border-b border-white/10 px-6 py-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
+            <span className="text-2xl font-black text-[#5b21b6]">SD</span>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+              Menu
+            </p>
+            <p className="text-sm font-semibold">SD OnTime</p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Menu
-          </p>
-          <p className="text-sm font-semibold">SD OnTime</p>
-        </div>
+
+        <nav className="space-y-6 px-6 py-6">
+          <div className="space-y-2">{primaryItems.map(renderLink)}</div>
+
+          {!isEmpleado && (
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                Validacion
+              </p>
+              <div className="space-y-2">{validationItems.map(renderLink)}</div>
+            </div>
+          )}
+
+          {!isEmpleado && (
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                Administracion
+              </p>
+              <div className="space-y-2">{adminItems.map(renderLink)}</div>
+            </div>
+          )}
+
+          {!isEmpleado && (
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                Sistema
+              </p>
+              <div className="space-y-2">{systemItems.map(renderLink)}</div>
+            </div>
+          )}
+        </nav>
+      </aside>
+
+      <div
+        className={`fixed inset-0 z-40 bg-black/40 transition md:hidden ${
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={onClose}
+        aria-hidden={!mobileOpen}
+      >
+        <aside
+          className={`absolute left-0 top-0 h-full w-72 bg-[#1f1b4d] text-white shadow-2xl transition ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-6 py-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white">
+                <span className="text-lg font-black text-[#5b21b6]">SD</span>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-white/60">
+                  Menu
+                </p>
+                <p className="text-sm font-semibold">SD OnTime</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/15 p-2 text-white/70"
+              aria-label="Cerrar menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <nav className="space-y-6 px-6 py-6">
+            <div className="space-y-2">
+              {primaryItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActiveLink(pathname, item.href);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={onClose}
+                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                      active
+                        ? "bg-white/15 text-white shadow-inner"
+                        : "text-white/70 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {!isEmpleado && (
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                  Validacion
+                </p>
+                <div className="space-y-2">
+                  {validationItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActiveLink(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-white/15 text-white shadow-inner"
+                            : "text-white/70 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <Icon size={18} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {!isEmpleado && (
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                  Administracion
+                </p>
+                <div className="space-y-2">
+                  {adminItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActiveLink(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-white/15 text-white shadow-inner"
+                            : "text-white/70 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <Icon size={18} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {!isEmpleado && (
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                  Sistema
+                </p>
+                <div className="space-y-2">
+                  {systemItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActiveLink(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={onClose}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-white/15 text-white shadow-inner"
+                            : "text-white/70 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <Icon size={18} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </nav>
+        </aside>
       </div>
 
-      <nav className="space-y-6 px-6 py-6">
-        <div className="space-y-2">{primaryItems.map(renderLink)}</div>
-
-        {!isEmpleado && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
-              Validacion
-            </p>
-            <div className="space-y-2">{validationItems.map(renderLink)}</div>
-          </div>
-        )}
-
-        {!isEmpleado && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
-              Administracion
-            </p>
-            <div className="space-y-2">{adminItems.map(renderLink)}</div>
-          </div>
-        )}
-
-        {!isEmpleado && (
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
-              Sistema
-            </p>
-            <div className="space-y-2">{systemItems.map(renderLink)}</div>
-          </div>
-        )}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#1f1b4d]/95 px-4 py-2 text-white backdrop-blur md:hidden">
+        <div className="flex items-center justify-between">
+          {primaryItems.map(renderMobileLink)}
+          {!isEmpleado && (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-medium text-white/60 transition hover:text-white"
+              aria-label="Menu"
+            >
+              <Menu size={20} />
+              <span className="text-[10px]">Menu</span>
+            </button>
+          )}
+        </div>
       </nav>
-    </aside>
+    </>
   );
 }
