@@ -1,0 +1,176 @@
+// Configuración básica para Prisma 7.x
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ================= MODELOS =================
+
+model Empresa {
+  id        String    @id @default(cuid())
+  nombre    String
+  cif       String    @unique
+  plan      String    @default("FREE")
+  usuarios  Usuario[]
+  departamentos Departamento[]
+  centrosTrabajo CentroTrabajo[]
+  createdAt DateTime  @default(now())
+}
+
+model Usuario {
+  id         String    @id @default(cuid())
+  nombre     String
+  email      String    @unique
+  password   String
+  rol        Rol       @default(EMPLEADO)
+  empresaId  String
+  empresa    Empresa   @relation(fields: [empresaId], references: [id])
+  departamentoId String?
+  departamento Departamento? @relation("DepartamentoEmpleados", fields: [departamentoId], references: [id])
+  fichajes   Fichaje[]
+  solicitudes Solicitud[]
+  solicitudesFichajeEnviadas SolicitudModificacionFichaje[] @relation("SolicitanteSolicitudFichaje")
+  solicitudesFichajeRecibidas SolicitudModificacionFichaje[] @relation("EmpleadoSolicitudFichaje")
+  solicitudesFichajeRespondidas SolicitudModificacionFichaje[] @relation("RespondedorSolicitudFichaje")
+  passwordResetTokens PasswordResetToken[]
+  justificanteAccesos JustificanteAcceso[]
+  gerenteDepartamentos Departamento[] @relation("DepartamentoGerente")
+  gerenteCentros CentroTrabajo[] @relation("CentroGerente")
+  createdAt  DateTime  @default(now())
+}
+
+model Fichaje {
+  id            String      @id @default(cuid())
+  entrada       DateTime    @default(now())
+  salida        DateTime?
+  tipo          TipoFichaje @default(JORNADA)
+
+  latitud       Float?
+  longitud      Float?
+
+  editado       Boolean     @default(false)
+  motivoEdicion String?
+  editadoPorId  String?
+
+  usuarioId     String
+  usuario       Usuario     @relation(fields: [usuarioId], references: [id])
+  solicitudesModificacion SolicitudModificacionFichaje[] @relation("FichajeSolicitudesModificacion")
+}
+
+model Solicitud {
+  id                  String          @id @default(cuid())
+  tipo                TipoSolicitud
+  estado              EstadoSolicitud @default(PENDIENTE)
+  inicio              DateTime
+  fin                 DateTime?
+  motivo              String?
+  justificanteNombre  String?
+  justificanteRuta    String?
+  justificanteMime    String?
+  justificanteSize    Int?
+  createdAt           DateTime        @default(now())
+
+  usuarioId           String
+  usuario             Usuario         @relation(fields: [usuarioId], references: [id])
+  justificanteAccesos JustificanteAcceso[]
+}
+
+model SolicitudModificacionFichaje {
+  id               String                @id @default(cuid())
+  empleadoId       String
+  empleado         Usuario               @relation("EmpleadoSolicitudFichaje", fields: [empleadoId], references: [id])
+  solicitanteId    String
+  solicitante      Usuario               @relation("SolicitanteSolicitudFichaje", fields: [solicitanteId], references: [id])
+  respondidoPorId  String?
+  respondidoPor    Usuario?              @relation("RespondedorSolicitudFichaje", fields: [respondidoPorId], references: [id])
+  fichajeId        String?
+  fichaje          Fichaje?              @relation("FichajeSolicitudesModificacion", fields: [fichajeId], references: [id])
+  entradaPropuesta DateTime?
+  salidaPropuesta  DateTime?
+  motivo           String?
+  estado           EstadoSolicitudFichaje @default(PENDIENTE)
+  createdAt        DateTime              @default(now())
+  respondedAt      DateTime?
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model JustificanteAcceso {
+  id          String              @id @default(cuid())
+  solicitudId String
+  solicitud   Solicitud           @relation(fields: [solicitudId], references: [id])
+  usuarioId   String
+  usuario     Usuario             @relation(fields: [usuarioId], references: [id])
+  accion      AccionJustificante
+  createdAt   DateTime            @default(now())
+}
+
+model Departamento {
+  id             String        @id @default(cuid())
+  nombre         String
+  empresaId      String
+  empresa        Empresa       @relation(fields: [empresaId], references: [id])
+  centroTrabajoId String?
+  centroTrabajo  CentroTrabajo? @relation(fields: [centroTrabajoId], references: [id])
+  gerenteId      String?
+  gerente        Usuario?      @relation("DepartamentoGerente", fields: [gerenteId], references: [id])
+  empleados      Usuario[]     @relation("DepartamentoEmpleados")
+  createdAt      DateTime      @default(now())
+}
+
+model CentroTrabajo {
+  id         String        @id @default(cuid())
+  nombre     String
+  empresaId  String
+  empresa    Empresa       @relation(fields: [empresaId], references: [id])
+  gerenteId  String?
+  gerente    Usuario?      @relation("CentroGerente", fields: [gerenteId], references: [id])
+  departamentos Departamento[]
+  createdAt  DateTime      @default(now())
+}
+
+enum Rol {
+  ADMIN_SISTEMA
+  GERENTE
+  EMPLEADO
+}
+
+enum TipoFichaje {
+  JORNADA
+  PAUSA_COMIDA
+  DESCANSO
+  MEDICO
+}
+
+enum TipoSolicitud {
+  VACACIONES
+  AUSENCIA
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+enum EstadoSolicitudFichaje {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+}
+
+enum AccionJustificante {
+  VER
+  BORRAR
+}

@@ -1,0 +1,125 @@
+"use server";
+
+import crypto from "crypto";
+
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? "justificantes";
+
+const requireConfig = () => {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    throw new Error("Supabase storage no configurado");
+  }
+};
+
+const allowedMimeTypes = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+]);
+
+const sanitizeFilename = (value: string) =>
+  value.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+export type UploadResult = {
+  ruta: string;
+  nombre: string;
+  mime: string;
+  size: number;
+};
+
+export const uploadJustificante = async (
+  file: File,
+  userId: string,
+): Promise<UploadResult> => {
+  requireConfig();
+
+  if (!allowedMimeTypes.has(file.type)) {
+    throw new Error("Tipo de archivo no permitido");
+  }
+
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error("Archivo demasiado grande");
+  }
+
+  const safeName = sanitizeFilename(file.name || "justificante");
+  const unique = crypto.randomUUID();
+  const ruta = `justificantes/${userId}/${unique}-${safeName}`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        "Content-Type": file.type,
+        "x-upsert": "false",
+      },
+      body: Buffer.from(arrayBuffer),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error subiendo archivo: ${errorText}`);
+  }
+
+  return {
+    ruta,
+    nombre: file.name,
+    mime: file.type,
+    size: file.size,
+  };
+};
+
+export const createSignedUrl = async (ruta: string, seconds: number) => {
+  requireConfig();
+
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/sign/${STORAGE_BUCKET}/${ruta}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: seconds }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error generando URL: ${errorText}`);
+  }
+
+  const payload = (await response.json()) as { signedURL?: string };
+  if (!payload.signedURL) {
+    throw new Error("No se genero URL");
+  }
+
+  return `${SUPABASE_URL}${payload.signedURL}`;
+};
+
+export const deleteJustificante = async (ruta: string) => {
+  requireConfig();
+
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+      },
+    },
+  );
+
+  if (!response.ok && response.status !== 404) {
+    const errorText = await response.text();
+    throw new Error(`Error eliminando archivo: ${errorText}`);
+  }
+};
