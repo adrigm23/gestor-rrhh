@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "./sidebar";
 import HeaderActions from "./header-actions";
 
@@ -17,6 +17,29 @@ export default function DashboardShell({
   role,
 }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const updateDeviceClass = () => {
+      const ua = navigator.userAgent ?? "";
+      const uaMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const pointerCoarse =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+      const screenMin = Math.min(window.screen.width, window.screen.height);
+      const isMobile = uaMobile || pointerCoarse || screenMin <= 820;
+
+      document.documentElement.classList.toggle("device-mobile", isMobile);
+    };
+
+    updateDeviceClass();
+    window.addEventListener("resize", updateDeviceClass);
+    window.addEventListener("orientationchange", updateDeviceClass);
+
+    return () => {
+      window.removeEventListener("resize", updateDeviceClass);
+      window.removeEventListener("orientationchange", updateDeviceClass);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#eef1ff] text-slate-900">

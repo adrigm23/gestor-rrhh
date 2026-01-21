@@ -38,3 +38,15 @@ body {
     display: inline-flex !important;
   }
 }
+
+.device-mobile .force-mobile-hidden {
+  display: none !important;
+}
+
+.device-mobile .force-mobile-block {
+  display: block !important;
+}
+
+.device-mobile .force-mobile-inline-flex {
+  display: inline-flex !important;
+}
