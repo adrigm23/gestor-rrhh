@@ -42,14 +42,14 @@ export default function SolicitudesFichajeEmpleado({
     <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
             Solicitudes
           </p>
           <h3 className="text-2xl font-semibold text-slate-900">
             Modificacion de fichajes
           </h3>
         </div>
-        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+        <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
           {solicitudes.length} pendientes
         </span>
       </header>
@@ -106,8 +106,8 @@ export default function SolicitudesFichajeEmpleado({
                     Salida: {formatDate(solicitud.fichajeSalida)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wider text-indigo-400">
+                <div className="rounded-xl border border-sky-100 bg-sky-50/40 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wider text-sky-400">
                     Propuesta
                   </p>
                   <p className="mt-1 text-sm text-slate-700">
@@ -157,3 +157,4 @@ export default function SolicitudesFichajeEmpleado({
     </section>
   );
 }
+

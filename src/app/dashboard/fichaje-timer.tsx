@@ -37,3 +37,4 @@ export default function FichajeTimer({ startIso, className }: FichajeTimerProps)
     </span>
   );
 }
+

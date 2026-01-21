@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -118,16 +119,24 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="force-mobile-hidden hidden w-full bg-[#1f1b4d] text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
+      <aside className="force-mobile-hidden hidden w-full bg-[#0b1535] text-white shadow-[0_24px_80px_rgba(10,20,48,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
         <div className="flex items-center gap-3 border-b border-white/10 px-6 py-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
-            <span className="text-2xl font-black text-[#5b21b6]">SD</span>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
+            <Image
+              src="/brand/suma3-logo.jpeg"
+              alt="suma3 consultores"
+              width={48}
+              height={48}
+              className="h-11 w-11 object-contain"
+              priority
+            />
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">
               Menu
             </p>
-            <p className="text-sm font-semibold">SD OnTime</p>
+            <p className="text-sm font-semibold">mdmm</p>
+            <p className="text-xs text-white/50">suma3 consultores</p>
           </div>
         </div>
 
@@ -164,28 +173,35 @@ export default function Sidebar({
       </aside>
 
       <div
-        className={`force-mobile-block fixed inset-0 z-40 bg-black/40 transition md:hidden ${
+        className={`force-mobile-block fixed inset-0 z-40 bg-black/50 transition md:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={onClose}
         aria-hidden={!mobileOpen}
       >
         <aside
-          className={`absolute left-0 top-0 h-full w-72 bg-[#1f1b4d] text-white shadow-2xl transition ${
+          className={`absolute left-0 top-0 h-full w-72 bg-[#0b1535] text-white shadow-2xl transition ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-center justify-between border-b border-white/10 px-6 py-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white">
-                <span className="text-lg font-black text-[#5b21b6]">SD</span>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-lg">
+                <Image
+                  src="/brand/suma3-logo.jpeg"
+                  alt="suma3 consultores"
+                  width={40}
+                  height={40}
+                  className="h-9 w-9 object-contain"
+                />
               </div>
               <div>
                 <p className="text-[11px] uppercase tracking-[0.3em] text-white/60">
                   Menu
                 </p>
-                <p className="text-sm font-semibold">SD OnTime</p>
+                <p className="text-sm font-semibold">mdmm</p>
+                <p className="text-xs text-white/50">suma3 consultores</p>
               </div>
             </div>
             <button
@@ -311,7 +327,7 @@ export default function Sidebar({
         </aside>
       </div>
 
-      <nav className="force-mobile-block fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#1f1b4d]/95 px-4 py-2 text-white backdrop-blur md:hidden">
+      <nav className="force-mobile-block fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0b1535]/95 px-4 py-2 text-white backdrop-blur md:hidden">
         <div className="flex items-center justify-between">
           {primaryItems.map(renderMobileLink)}
           {!isEmpleado && (
@@ -330,3 +346,4 @@ export default function Sidebar({
     </>
   );
 }
+

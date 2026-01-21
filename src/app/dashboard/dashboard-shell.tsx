@@ -42,7 +42,7 @@ export default function DashboardShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#eef1ff] text-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
       <div className="flex min-h-screen flex-col md:flex-row">
         <Sidebar
           role={role}
@@ -52,7 +52,7 @@ export default function DashboardShell({
         />
 
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-white/30 bg-[#eef1ff]/80 backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
+          <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
             <HeaderActions
               userName={userName}
               onMenuClick={() => setMobileMenuOpen(true)}
@@ -64,7 +64,7 @@ export default function DashboardShell({
           </main>
 
           <footer className="pb-24 text-center text-xs text-slate-400 md:pb-8">
-            <p>(c) 2026 - SD OnTime - Politica de Privacidad - Aviso Legal</p>
+            <p>(c) 2026 - mdmm - suma3 consultores - Politica de Privacidad - Aviso Legal</p>
             <p className="mt-1 text-slate-300">v1.7.7</p>
           </footer>
         </div>
@@ -72,3 +72,4 @@ export default function DashboardShell({
     </div>
   );
 }
+

@@ -34,3 +34,4 @@ export default async function CalendarioPage() {
 
   return <CalendarioEmpleado solicitudes={resumen} />;
 }
+

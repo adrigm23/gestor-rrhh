@@ -72,14 +72,14 @@ export default async function DepartamentosPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
             Administracion
           </p>
           <h2 className="text-3xl font-semibold text-slate-900">Departamentos</h2>
         </div>
         <a
           href="#crear-departamento"
-          className="rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-200/60"
+          className="rounded-full bg-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"
         >
           Crear departamento
         </a>
@@ -107,7 +107,7 @@ export default async function DepartamentosPage() {
                 name="nombre"
                 type="text"
                 required
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 placeholder="Ej: Operaciones"
               />
             </div>
@@ -116,7 +116,7 @@ export default async function DepartamentosPage() {
                 <label className="text-sm font-semibold text-slate-700">Empresa</label>
                 <select
                   name="empresaId"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
                   <option value="">Selecciona empresa</option>
                   {empresas.map((empresa) => (
@@ -133,7 +133,7 @@ export default async function DepartamentosPage() {
               </label>
               <select
                 name="gerenteId"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               >
                 <option value="">Sin gerente</option>
                 {gerentes.map((gerente) => (
@@ -152,7 +152,7 @@ export default async function DepartamentosPage() {
               </label>
               <select
                 name="centroTrabajoId"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               >
                 <option value="">Sin centro</option>
                 {centros.map((centro) => (
@@ -169,7 +169,7 @@ export default async function DepartamentosPage() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-4 text-sm font-semibold text-white shadow-xl shadow-indigo-200/70 transition hover:brightness-110"
+            className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110"
           >
             Guardar departamento
           </button>
@@ -227,3 +227,4 @@ export default async function DepartamentosPage() {
     </div>
   );
 }
+

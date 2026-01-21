@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -17,7 +18,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Intentamos iniciar sesión con el proveedor 'credentials'
+      // Intentamos iniciar sesion con el proveedor "credentials"
       const result = await signIn("credentials", {
         email,
         password,
@@ -32,70 +33,88 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err) {
-      setError("Ocurrió un error inesperado.");
+      setError("Ocurrio un error inesperado.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#8e2de2]">
-      {/* Fondo con degradado inspirado en tu imagen */}
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1535]">
+      {/* Fondo con degradado de marca */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-700 to-cyan-500 opacity-95" />
-        {/* Formas orgánicas de fondo */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-600 via-sky-700 to-slate-900 opacity-95" />
+        {/* Formas organicas de fondo */}
+        <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-teal-400/30 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl animate-pulse" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md p-8 bg-white/10 backdrop-blur-xl rounded-[2.5rem] border border-white/20 shadow-2xl mx-4">
+      <div className="relative z-10 mx-4 w-full max-w-md rounded-[2.5rem] border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-xl">
         {/* Logo y Encabezado */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="text-white text-4xl font-black flex items-center gap-3 mb-3 tracking-tighter">
-            <span className="bg-white text-indigo-700 px-3 py-1 rounded-2xl shadow-lg">SD</span>
-            OnTime
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="mb-4 flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
+              <Image
+                src="/brand/suma3-logo.jpeg"
+                alt="suma3 consultores"
+                width={48}
+                height={48}
+                className="h-11 w-11 object-contain"
+                priority
+              />
+            </div>
+            <div className="text-left">
+              <p className="text-[11px] uppercase tracking-[0.35em] text-white/60">
+                suma3 consultores
+              </p>
+              <p className="text-2xl font-semibold text-white">mdmm</p>
+            </div>
           </div>
-          <h1 className="text-white text-xl font-semibold">Bienvenido a tu APP Laboral</h1>
-          <p className="text-white/60 text-sm mt-1">Gestiona tu tiempo con eficacia</p>
+          <h1 className="mt-4 text-xl font-semibold text-white">Bienvenido a mdmm</h1>
+          <p className="mt-1 text-sm text-white/60">
+            Control horario y gestion laboral en un solo lugar
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="bg-red-500/20 border border-red-500/40 text-red-100 p-4 rounded-2xl text-sm text-center font-medium animate-bounce">
+            <div className="animate-bounce rounded-2xl border border-red-500/40 bg-red-500/20 p-4 text-center text-sm font-medium text-red-100">
               {error}
             </div>
           )}
 
           <div className="space-y-2">
-            <label className="text-white/80 text-sm font-medium ml-1">Correo electrónico</label>
+            <label className="ml-1 text-sm font-medium text-white/80">
+              Correo electronico
+            </label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@test.com"
-              className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all outline-none"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-white placeholder-white/30 outline-none transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-white/80 text-sm font-medium ml-1">Contraseña</label>
+            <label className="ml-1 text-sm font-medium text-white/80">Contrasena</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all outline-none"
+              placeholder="********"
+              className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-white placeholder-white/30 outline-none transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-cyan-400 hover:bg-cyan-300 disabled:bg-cyan-800 disabled:opacity-50 text-indigo-950 font-extrabold rounded-2xl shadow-xl transition-all active:scale-[0.98] mt-4 flex justify-center items-center"
+            className="mt-4 flex w-full items-center justify-center rounded-2xl bg-teal-400 py-4 font-extrabold text-slate-900 shadow-xl transition-all hover:bg-teal-300 active:scale-[0.98] disabled:bg-teal-700 disabled:opacity-50"
           >
-            {isLoading ? "Validando..." : "Iniciar sesión"}
+            {isLoading ? "Validando..." : "Iniciar sesion"}
           </button>
         </form>
 
@@ -107,12 +126,14 @@ export default function LoginPage() {
 
         {/* Footer del login */}
         <div className="mt-10 flex flex-col items-center gap-3">
-          <div className="flex gap-4 text-xs text-white/50 font-medium">
-            <button className="hover:text-white transition-colors">Política de Privacidad</button>
+          <div className="flex gap-4 text-xs font-medium text-white/50">
+            <button className="transition-colors hover:text-white">
+              Politica de Privacidad
+            </button>
             <span>|</span>
-            <button className="hover:text-white transition-colors">Aviso Legal</button>
+            <button className="transition-colors hover:text-white">Aviso Legal</button>
           </div>
-          <p className="text-[10px] text-white/30 tracking-widest uppercase">v1.1.0</p>
+          <p className="text-[10px] uppercase tracking-widest text-white/30">v1.7.7</p>
         </div>
       </div>
     </main>

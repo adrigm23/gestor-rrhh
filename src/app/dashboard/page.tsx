@@ -33,24 +33,26 @@ export default async function DashboardPage() {
     return (
       <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 px-6 py-10 text-slate-100 shadow-2xl shadow-slate-900/40 sm:px-10">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-indigo-600/20 blur-[120px]" />
-          <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-purple-500/20 blur-[110px]" />
+          <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-sky-600/20 blur-[120px]" />
+          <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-teal-500/20 blur-[110px]" />
         </div>
 
         <div className="relative space-y-10">
           <header className="flex flex-col gap-5 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-400/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/30">
                 <ShieldCheck size={26} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/70">
-                  SD OnTime
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/70">
+                  mdmm
                 </p>
                 <h1 className="text-2xl font-semibold text-white sm:text-3xl">
                   Panel de Control Global
                 </h1>
-                <p className="text-sm text-slate-300">Gestionando SD OnTime</p>
+                <p className="text-sm text-slate-300">
+                  Plataforma de suma3 consultores
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-200">
@@ -62,7 +64,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <section className="lg:col-span-2 rounded-[2rem] bg-white p-8 text-slate-900 shadow-[0_20px_80px_rgba(15,23,42,0.18)]">
               <div className="flex items-center gap-3">
-                <UserPlus className="text-purple-600" />
+                <UserPlus className="text-teal-600" />
                 <h2 className="text-xl font-semibold text-slate-900">
                   Alta de Nuevo Gerente
                 </h2>
@@ -83,7 +85,7 @@ export default async function DashboardPage() {
                     name="nombre"
                     type="text"
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-300"
                     placeholder="Ej: Juan Perez"
                   />
                 </div>
@@ -95,7 +97,7 @@ export default async function DashboardPage() {
                     name="email"
                     type="email"
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-300"
                     placeholder="gerente@empresa.com"
                   />
                 </div>
@@ -107,7 +109,7 @@ export default async function DashboardPage() {
                     name="password"
                     type="password"
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-300"
                     placeholder="********"
                   />
                 </div>
@@ -118,7 +120,7 @@ export default async function DashboardPage() {
                   <select
                     name="empresaId"
                     required
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-300"
                   >
                     <option value="">Selecciona una empresa...</option>
                     {empresas.map((emp) => (
@@ -131,7 +133,7 @@ export default async function DashboardPage() {
                 <div className="md:col-span-2 pt-2">
                   <button
                     type="submit"
-                    className="w-full rounded-2xl bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110"
+                    className="w-full rounded-2xl bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:brightness-110"
                   >
                     Registrar Gerente
                   </button>
@@ -139,13 +141,13 @@ export default async function DashboardPage() {
               </form>
             </section>
 
-            <aside className="flex flex-col justify-between rounded-[2rem] bg-gradient-to-br from-indigo-800 via-indigo-900 to-slate-900 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.4)]">
+            <aside className="flex flex-col justify-between rounded-[2rem] bg-gradient-to-br from-sky-800 via-sky-900 to-slate-900 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.4)]">
               <div>
                 <Activity className="mb-6 text-emerald-300" size={40} />
                 <h2 className="text-lg font-semibold text-white">
                   Conectado a Supabase
                 </h2>
-                <p className="mt-1 text-sm text-indigo-200/80">
+                <p className="mt-1 text-sm text-sky-200/80">
                   Empresas en sistema: {empresas.length}
                 </p>
               </div>
@@ -213,7 +215,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
           Fichaje
         </p>
         <h2 className="text-3xl font-semibold text-slate-900">Fichaje</h2>
@@ -247,7 +249,7 @@ export default async function DashboardPage() {
             className={`w-full rounded-full py-5 text-lg font-semibold text-white shadow-2xl transition ${
               ultimoFichaje
                 ? "bg-red-500 hover:bg-red-600 shadow-red-200/70"
-                : "bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 hover:brightness-110 shadow-indigo-200/80"
+                : "bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 hover:brightness-110 shadow-sky-200/80"
             }`}
           >
             {ultimoFichaje ? "Registrar Salida" : "Registrar entrada"}
@@ -262,3 +264,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+

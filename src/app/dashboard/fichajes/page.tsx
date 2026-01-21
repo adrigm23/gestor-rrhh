@@ -193,7 +193,7 @@ export default async function FichajesPage({
     <div className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
             Validacion
           </p>
           <h2 className="text-3xl font-semibold text-slate-900">Fichajes</h2>
@@ -202,21 +202,21 @@ export default async function FichajesPage({
           {canQuery ? (
             <a
               href={exportHref}
-              className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-200/60"
+              className="rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"
             >
               Descargar informe
             </a>
           ) : (
             <button
               disabled
-              className="cursor-not-allowed rounded-full bg-cyan-300 px-5 py-2 text-sm font-semibold text-white/80"
+              className="cursor-not-allowed rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-white/80"
             >
               Descargar informe
             </button>
           )}
           <a
             href="#filtros"
-            className="rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-200/60"
+            className="rounded-full bg-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"
           >
             Filtros
           </a>
@@ -237,7 +237,7 @@ export default async function FichajesPage({
                 <select
                   name="empresaId"
                   defaultValue={empresaParam}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
                   <option value="">Selecciona empresa</option>
                   {empresas.map((empresa) => (
@@ -258,7 +258,7 @@ export default async function FichajesPage({
                 name="empleadoId"
                 defaultValue={empleadoParam}
                 disabled={!empresaFiltro}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-50"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:bg-slate-50"
               >
                 <option value="">Todos</option>
                 {empleados.map((empleado) => (
@@ -276,7 +276,7 @@ export default async function FichajesPage({
                 type="date"
                 name="from"
                 defaultValue={fromParam}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               />
             </div>
             <div className="space-y-2">
@@ -287,7 +287,7 @@ export default async function FichajesPage({
                 type="date"
                 name="to"
                 defaultValue={toParam}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               />
             </div>
           </div>
@@ -300,7 +300,7 @@ export default async function FichajesPage({
               <select
                 name="estado"
                 defaultValue={estadoParam}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               >
                 <option value="todos">Todos</option>
                 <option value="abierto">Abierto</option>
@@ -314,7 +314,7 @@ export default async function FichajesPage({
               <select
                 name="tipo"
                 defaultValue={tipoParam}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               >
                 <option value="todos">Todos</option>
                 <option value="JORNADA">Jornada</option>
@@ -326,7 +326,7 @@ export default async function FichajesPage({
             <div className="flex items-end">
               <button
                 type="submit"
-                className="w-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-3 text-sm font-semibold text-white shadow-xl shadow-indigo-200/70 transition hover:brightness-110"
+                className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-3 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110"
               >
                 Aplicar filtros
               </button>
@@ -409,3 +409,4 @@ export default async function FichajesPage({
     </div>
   );
 }
+

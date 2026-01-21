@@ -129,7 +129,7 @@ export default function SolicitudesPanel({
     <div className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
             Validacion
           </p>
           <h2 className="text-3xl font-semibold text-slate-900">
@@ -142,8 +142,8 @@ export default function SolicitudesPanel({
             onClick={() => setTab("VACACIONES")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition ${
               tab === "VACACIONES"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-200/70"
-                : "border border-purple-400 text-purple-600"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-200/70"
+                : "border border-teal-400 text-teal-600"
             }`}
           >
             <CalendarDays size={16} />
@@ -154,8 +154,8 @@ export default function SolicitudesPanel({
             onClick={() => setTab("AUSENCIA")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition ${
               tab === "AUSENCIA"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-200/70"
-                : "border border-purple-400 text-purple-600"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-200/70"
+                : "border border-teal-400 text-teal-600"
             }`}
           >
             <PlaneTakeoff size={16} />
@@ -215,7 +215,7 @@ export default function SolicitudesPanel({
                         type="button"
                         onClick={() => handleView(item.id)}
                         disabled={isPending && viewingId === item.id}
-                        className="inline-flex rounded-full border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex rounded-full border border-sky-200 px-3 py-1 text-xs font-semibold text-sky-600 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Ver justificante
                       </button>
@@ -261,3 +261,4 @@ export default function SolicitudesPanel({
     </div>
   );
 }
+

@@ -75,3 +75,4 @@ export default async function VacacionesAusenciasPage() {
 
   return <SolicitudesPanel solicitudes={pendientes} />;
 }
+

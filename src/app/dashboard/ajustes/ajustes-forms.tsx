@@ -52,7 +52,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="text"
               required
               defaultValue={nombre}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
@@ -62,13 +62,13 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="email"
               required
               defaultValue={email}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <button
             type="submit"
             disabled={perfilPending}
-            className="w-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-3 text-sm font-semibold text-white shadow-xl shadow-indigo-200/70 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-3 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {perfilPending ? "Guardando..." : "Guardar cambios"}
           </button>
@@ -103,7 +103,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
@@ -115,7 +115,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
@@ -127,7 +127,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <button
@@ -142,3 +142,4 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
     </div>
   );
 }
+

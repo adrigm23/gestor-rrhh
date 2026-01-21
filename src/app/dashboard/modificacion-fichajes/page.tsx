@@ -72,7 +72,7 @@ export default async function ModificacionFichajesPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
           Validacion
         </p>
         <h2 className="text-3xl font-semibold text-slate-900">
@@ -149,3 +149,4 @@ export default async function ModificacionFichajesPage() {
     </div>
   );
 }
+

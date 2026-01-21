@@ -33,7 +33,7 @@ export default function HeaderActions({
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/login" })}
-        className="flex items-center gap-2 rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800 sm:px-4"
+        className="flex items-center gap-2 rounded-full bg-[#0b1535] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#14254f] sm:px-4"
       >
         <LogOut size={16} />
         <span className="hidden sm:inline">Cerrar sesion</span>
@@ -41,3 +41,4 @@ export default function HeaderActions({
     </div>
   );
 }
+

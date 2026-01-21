@@ -147,7 +147,7 @@ export default function CalendarioEmpleado({
     <div className="space-y-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-indigo-500/70">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
             Calendario
           </p>
           <h2 className="text-3xl font-semibold text-slate-900">
@@ -160,8 +160,8 @@ export default function CalendarioEmpleado({
             onClick={() => setTab("vacaciones")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition ${
               tab === "vacaciones"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-200/70"
-                : "border border-purple-400 text-purple-600"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-200/70"
+                : "border border-teal-400 text-teal-600"
             }`}
           >
             <CalendarDays size={16} />
@@ -172,8 +172,8 @@ export default function CalendarioEmpleado({
             onClick={() => setTab("ausencia")}
             className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition ${
               tab === "ausencia"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-200/70"
-                : "border border-purple-400 text-purple-600"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-200/70"
+                : "border border-teal-400 text-teal-600"
             }`}
           >
             <PlaneTakeoff size={16} />
@@ -238,9 +238,9 @@ export default function CalendarioEmpleado({
                   onClick={() => handleDayClick(date)}
                   className={`flex h-11 items-center justify-center rounded-2xl text-sm font-medium transition ${
                     selected
-                      ? "bg-indigo-100 text-indigo-700"
+                      ? "bg-sky-100 text-sky-700"
                       : "text-slate-600 hover:bg-slate-100"
-                  } ${isStart || isEnd ? "ring-2 ring-indigo-400" : ""}`}
+                  } ${isStart || isEnd ? "ring-2 ring-sky-400" : ""}`}
                 >
                   {date.getDate()}
                 </button>
@@ -261,13 +261,13 @@ export default function CalendarioEmpleado({
             <textarea
               name="motivo"
               rows={3}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
               placeholder="Comentario opcional"
             />
             <button
               type="submit"
               disabled={!rangeStart}
-              className="w-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-4 text-sm font-semibold text-white shadow-xl shadow-indigo-200/70 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Enviar solicitud
             </button>
@@ -302,7 +302,7 @@ export default function CalendarioEmpleado({
                   name="inicio"
                   type="date"
                   required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 />
               </div>
               <div className="space-y-2">
@@ -312,7 +312,7 @@ export default function CalendarioEmpleado({
                 <input
                   name="fin"
                   type="date"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 />
               </div>
               <div className="space-y-2">
@@ -321,7 +321,7 @@ export default function CalendarioEmpleado({
                 </label>
                 <select
                   name="motivo"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
                   <option value="">Seleccionar...</option>
                   <option value="Medico">Medico</option>
@@ -343,7 +343,7 @@ export default function CalendarioEmpleado({
 
             <button
               type="submit"
-              className="w-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-4 text-sm font-semibold text-white shadow-xl shadow-indigo-200/70 transition hover:brightness-110"
+              className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110"
             >
               Enviar ausencia
             </button>
@@ -398,3 +398,4 @@ export default function CalendarioEmpleado({
     </div>
   );
 }
+
