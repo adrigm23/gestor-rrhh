@@ -25,7 +25,7 @@ export default function HeaderActions({
       <button
         type="button"
         onClick={onMenuClick}
-        className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:text-slate-700 md:hidden"
+        className="force-mobile-inline-flex rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:text-slate-700 md:hidden"
         aria-label="Menu"
       >
         <Menu size={18} />

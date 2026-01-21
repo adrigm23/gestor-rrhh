@@ -118,7 +118,7 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="hidden w-full bg-[#1f1b4d] text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
+      <aside className="force-mobile-hidden hidden w-full bg-[#1f1b4d] text-white shadow-[0_24px_80px_rgba(15,23,42,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
         <div className="flex items-center gap-3 border-b border-white/10 px-6 py-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
             <span className="text-2xl font-black text-[#5b21b6]">SD</span>
@@ -164,7 +164,7 @@ export default function Sidebar({
       </aside>
 
       <div
-        className={`fixed inset-0 z-40 bg-black/40 transition md:hidden ${
+        className={`force-mobile-block fixed inset-0 z-40 bg-black/40 transition md:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={onClose}
@@ -311,7 +311,7 @@ export default function Sidebar({
         </aside>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#1f1b4d]/95 px-4 py-2 text-white backdrop-blur md:hidden">
+      <nav className="force-mobile-block fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#1f1b4d]/95 px-4 py-2 text-white backdrop-blur md:hidden">
         <div className="flex items-center justify-between">
           {primaryItems.map(renderMobileLink)}
           {!isEmpleado && (
