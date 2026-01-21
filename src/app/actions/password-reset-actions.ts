@@ -13,6 +13,8 @@ export type PasswordResetState = {
 const emptySuccess: PasswordResetState = { status: "success" };
 const emptyError: PasswordResetState = { status: "error" };
 const TOKEN_TTL_MINUTES = 30;
+const RESET_WINDOW_MINUTES = 15;
+const RESET_MAX_REQUESTS = 3;
 
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
@@ -36,6 +38,23 @@ export async function solicitarResetPassword(
   });
 
   if (usuario) {
+    const windowStart = new Date(
+      Date.now() - RESET_WINDOW_MINUTES * 60 * 1000,
+    );
+    const recentRequests = await prisma.passwordResetToken.count({
+      where: {
+        usuarioId: usuario.id,
+        createdAt: { gte: windowStart },
+      },
+    });
+
+    if (recentRequests >= RESET_MAX_REQUESTS) {
+      return {
+        ...emptySuccess,
+        message: "Si el correo existe, recibiras un enlace para restablecer.",
+      };
+    }
+
     const token = crypto.randomBytes(32).toString("hex");
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000);
@@ -75,7 +94,7 @@ export async function resetPassword(
   const newPassword = formData.get("newPassword")?.toString() ?? "";
   const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
 
-  if (!token) {
+  if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
     return { ...emptyError, message: "Token invalido." };
   }
 

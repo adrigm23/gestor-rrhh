@@ -5,6 +5,13 @@ import Credentials from "next-auth/providers/credentials";
 import { comparePassword } from "../../../app/utils/password"; // Ajusta la ruta según tu estructura
 import { prisma } from "../../../app/lib/prisma"; // 👈 IMPORTA LA INSTANCIA GLOBAL
 
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 // 1. EXTENSIÓN DE TIPOS (Mantenemos tu código actual que está bien)
 declare module "next-auth" {
   interface Session {
@@ -40,19 +47,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = normalizeEmail(credentials.email as string);
+
         // Usamos la instancia centralizada
         const user = await prisma.usuario.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          await sleep(600);
+          return null;
+        }
 
         const isPasswordCorrect = await comparePassword(
           credentials.password as string,
           user.password
         );
 
-        if (!isPasswordCorrect) return null;
+        if (!isPasswordCorrect) {
+          await sleep(600);
+          return null;
+        }
 
         return {
           id: String(user.id),

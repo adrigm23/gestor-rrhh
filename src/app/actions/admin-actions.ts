@@ -22,10 +22,10 @@ export async function crearGerente(formData: FormData) {
     throw new Error("No autorizado");
   }
 
-  const nombre = formData.get("nombre") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const empresaId = formData.get("empresaId") as string;
+  const nombre = formData.get("nombre")?.toString().trim() ?? "";
+  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const password = formData.get("password")?.toString() ?? "";
+  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
 
   if (!nombre || !email || !password || !empresaId) return;
 
@@ -59,11 +59,11 @@ export async function crearEmpleado(formData: FormData) {
     throw new Error("No autorizado");
   }
 
-  const nombre = formData.get("nombre") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const departamentoId = (formData.get("departamentoId") as string) || null;
-  const empresaIdForm = (formData.get("empresaId") as string) || null;
+  const nombre = formData.get("nombre")?.toString().trim() ?? "";
+  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const password = formData.get("password")?.toString() ?? "";
+  const departamentoId = formData.get("departamentoId")?.toString().trim() || null;
+  const empresaIdForm = formData.get("empresaId")?.toString().trim() || null;
 
   if (!nombre || !email || !password) return;
 

@@ -18,6 +18,31 @@ const allowedMimeTypes = new Set([
   "image/png",
 ]);
 
+const signatureMatches = (bytes: Uint8Array, signature: number[]) =>
+  signature.every((value, index) => bytes[index] === value);
+
+const sniffMime = (bytes: Uint8Array) => {
+  if (signatureMatches(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d])) {
+    return "application/pdf";
+  }
+  if (signatureMatches(bytes, [0xff, 0xd8, 0xff])) {
+    return "image/jpeg";
+  }
+  if (
+    signatureMatches(bytes, [
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ])
+  ) {
+    return "image/png";
+  }
+  return null;
+};
+
+const readFileHeader = async (file: File, length = 12) => {
+  const buffer = await file.slice(0, length).arrayBuffer();
+  return new Uint8Array(buffer);
+};
+
 const sanitizeFilename = (value: string) =>
   value.replace(/[^a-zA-Z0-9._-]/g, "_");
 
@@ -34,7 +59,18 @@ export const uploadJustificante = async (
 ): Promise<UploadResult> => {
   requireConfig();
 
-  if (!allowedMimeTypes.has(file.type)) {
+  const headerBytes = await readFileHeader(file);
+  const detectedMime = sniffMime(headerBytes);
+
+  if (!detectedMime || !allowedMimeTypes.has(detectedMime)) {
+    throw new Error("Tipo de archivo no permitido");
+  }
+
+  if (
+    file.type &&
+    file.type !== detectedMime &&
+    file.type !== "application/octet-stream"
+  ) {
     throw new Error("Tipo de archivo no permitido");
   }
 
@@ -55,7 +91,7 @@ export const uploadJustificante = async (
       headers: {
         Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
         apikey: SERVICE_ROLE_KEY,
-        "Content-Type": file.type,
+        "Content-Type": detectedMime,
         "x-upsert": "false",
       },
       body: Buffer.from(arrayBuffer),
@@ -70,7 +106,7 @@ export const uploadJustificante = async (
   return {
     ruta,
     nombre: file.name,
-    mime: file.type,
+    mime: detectedMime,
     size: file.size,
   };
 };

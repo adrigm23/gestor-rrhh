@@ -13,35 +13,46 @@ export async function toggleFichaje() {
   }
 
   const userId = session.user.id;
+  const MAX_RETRIES = 2;
 
-  // 1. Buscar si hay un fichaje abierto (sin fecha de salida)
-  const ultimoFichaje = await prisma.fichaje.findFirst({
-    where: {
-      usuarioId: userId,
-      salida: null, // Si es null, es que está "dentro"
-    },
-    orderBy: { entrada: "desc" },
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          const ultimoFichaje = await tx.fichaje.findFirst({
+            where: {
+              usuarioId: userId,
+              salida: null,
+            },
+            orderBy: { entrada: "desc" },
+          });
 
-  if (ultimoFichaje) {
-    // === CASO SALIDA ===
-    // Si hay uno abierto, lo cerramos (registramos la salida)
-    await prisma.fichaje.update({
-      where: { id: ultimoFichaje.id },
-      data: { salida: new Date() },
-    });
-  } else {
-    // === CASO ENTRADA ===
-    // Si no hay ninguno abierto, creamos uno nuevo
-    await prisma.fichaje.create({
-      data: {
-        usuarioId: userId,
-        entrada: new Date(),
-        tipo: "JORNADA", // Por defecto según tu Enum
-      },
-    });
+          if (ultimoFichaje) {
+            await tx.fichaje.update({
+              where: { id: ultimoFichaje.id },
+              data: { salida: new Date() },
+            });
+            return;
+          }
+
+          await tx.fichaje.create({
+            data: {
+              usuarioId: userId,
+              entrada: new Date(),
+              tipo: "JORNADA",
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
+      break;
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code == "P2034" && attempt < MAX_RETRIES) {
+        continue;
+      }
+      throw error;
+    }
   }
-
-  // Recargamos la pantalla del dashboard para ver los cambios al instante
   revalidatePath("/dashboard");
 }

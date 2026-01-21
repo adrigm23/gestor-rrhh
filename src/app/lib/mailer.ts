@@ -17,7 +17,7 @@ export const sendPasswordResetEmail = async (params: {
   resetUrl: string;
 }) => {
   if (!isConfigured()) {
-    console.warn("SMTP no configurado. Link de reset:", params.resetUrl);
+    console.warn("SMTP no configurado. Email de restablecimiento no enviado.");
     return;
   }
 
