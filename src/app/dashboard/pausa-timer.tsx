@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type FichajeTimerProps = {
-  startIso?: string | null;
+type PausaTimerProps = {
   pauseAccumulatedMs?: number;
   pauseStartIso?: string | null;
   className?: string;
@@ -16,37 +15,29 @@ const formatDuration = (ms: number) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} Hrs`;
 };
 
-export default function FichajeTimer({
-  startIso,
+export default function PausaTimer({
   pauseAccumulatedMs = 0,
   pauseStartIso,
   className,
-}: FichajeTimerProps) {
-  const [elapsedMs, setElapsedMs] = useState(0);
+}: PausaTimerProps) {
+  const [elapsedMs, setElapsedMs] = useState(pauseAccumulatedMs);
 
   useEffect(() => {
-    if (!startIso) {
-      setElapsedMs(0);
-      return;
-    }
-
-    const start = new Date(startIso).getTime();
     const pauseStart = pauseStartIso ? new Date(pauseStartIso).getTime() : null;
     const update = () => {
       const now = Date.now();
       const livePause = pauseStart ? Math.max(0, now - pauseStart) : 0;
-      setElapsedMs(Math.max(0, now - start - pauseAccumulatedMs - livePause));
+      setElapsedMs(pauseAccumulatedMs + livePause);
     };
 
     update();
     const id = window.setInterval(update, 1000);
     return () => window.clearInterval(id);
-  }, [pauseAccumulatedMs, pauseStartIso, startIso]);
+  }, [pauseAccumulatedMs, pauseStartIso]);
 
   return (
     <span className={className} suppressHydrationWarning>
-      {startIso ? formatDuration(elapsedMs) : "00:00 Hrs"}
+      {formatDuration(elapsedMs)}
     </span>
   );
 }
-

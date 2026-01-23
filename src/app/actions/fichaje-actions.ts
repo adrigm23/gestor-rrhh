@@ -23,11 +23,28 @@ export async function toggleFichaje() {
             where: {
               usuarioId: userId,
               salida: null,
+              tipo: "JORNADA",
             },
             orderBy: { entrada: "desc" },
           });
 
           if (ultimoFichaje) {
+            const pausaActiva = await tx.fichaje.findFirst({
+              where: {
+                usuarioId: userId,
+                salida: null,
+                tipo: "PAUSA_COMIDA",
+              },
+              orderBy: { entrada: "desc" },
+            });
+
+            if (pausaActiva) {
+              await tx.fichaje.update({
+                where: { id: pausaActiva.id },
+                data: { salida: new Date() },
+              });
+            }
+
             await tx.fichaje.update({
               where: { id: ultimoFichaje.id },
               data: { salida: new Date() },
@@ -54,5 +71,72 @@ export async function toggleFichaje() {
       throw error;
     }
   }
+  revalidatePath("/dashboard");
+}
+
+export async function togglePausa() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error("No autorizado");
+  }
+
+  const userId = session.user.id;
+  const MAX_RETRIES = 2;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          const jornadaActiva = await tx.fichaje.findFirst({
+            where: {
+              usuarioId: userId,
+              salida: null,
+              tipo: "JORNADA",
+            },
+            orderBy: { entrada: "desc" },
+          });
+
+          if (!jornadaActiva) {
+            return;
+          }
+
+          const pausaActiva = await tx.fichaje.findFirst({
+            where: {
+              usuarioId: userId,
+              salida: null,
+              tipo: "PAUSA_COMIDA",
+            },
+            orderBy: { entrada: "desc" },
+          });
+
+          if (pausaActiva) {
+            await tx.fichaje.update({
+              where: { id: pausaActiva.id },
+              data: { salida: new Date() },
+            });
+            return;
+          }
+
+          await tx.fichaje.create({
+            data: {
+              usuarioId: userId,
+              entrada: new Date(),
+              tipo: "PAUSA_COMIDA",
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
+      break;
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code == "P2034" && attempt < MAX_RETRIES) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
   revalidatePath("/dashboard");
 }

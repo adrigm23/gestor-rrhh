@@ -3,7 +3,7 @@ import { auth } from "../api/auth/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../lib/prisma";
 import { crearGerente } from "../actions/admin-actions";
-import { toggleFichaje } from "../actions/fichaje-actions";
+import { toggleFichaje, togglePausa } from "../actions/fichaje-actions";
 import {
   Play,
   Pause,
@@ -13,6 +13,7 @@ import {
   Activity,
 } from "lucide-react";
 import FichajeTimer from "./fichaje-timer";
+import PausaTimer from "./pausa-timer";
 import SolicitudesFichajeEmpleado, {
   type SolicitudFichajeEmpleado,
 } from "./solicitudes-fichaje-empleado";
@@ -168,15 +169,50 @@ export default async function DashboardPage() {
     day: "numeric",
   });
 
-  const ultimoFichaje = userId
+  const jornadaActiva = userId
     ? await prisma.fichaje.findFirst({
-        where: { usuarioId: userId, salida: null },
+        where: { usuarioId: userId, salida: null, tipo: "JORNADA" },
         orderBy: { entrada: "desc" },
       })
     : null;
 
-  const entradaIso = ultimoFichaje?.entrada
-    ? ultimoFichaje.entrada.toISOString()
+  const entradaIso = jornadaActiva?.entrada
+    ? jornadaActiva.entrada.toISOString()
+    : null;
+
+  const pausaActiva =
+    userId && jornadaActiva
+      ? await prisma.fichaje.findFirst({
+          where: {
+            usuarioId: userId,
+            salida: null,
+            tipo: "PAUSA_COMIDA",
+            entrada: { gte: jornadaActiva.entrada },
+          },
+          orderBy: { entrada: "desc" },
+        })
+      : null;
+
+  const pausasCerradas =
+    userId && jornadaActiva
+      ? await prisma.fichaje.findMany({
+          where: {
+            usuarioId: userId,
+            tipo: "PAUSA_COMIDA",
+            entrada: { gte: jornadaActiva.entrada },
+            salida: { not: null },
+          },
+          orderBy: { entrada: "asc" },
+        })
+      : [];
+
+  const pauseAccumulatedMs = pausasCerradas.reduce((total, pausa) => {
+    const end = pausa.salida ? pausa.salida.getTime() : pausa.entrada.getTime();
+    return total + Math.max(0, end - pausa.entrada.getTime());
+  }, 0);
+
+  const pauseStartIso = pausaActiva?.entrada
+    ? pausaActiva.entrada.toISOString()
     : null;
 
   const solicitudesFichaje: SolicitudFichajeEmpleado[] =
@@ -232,6 +268,8 @@ export default async function DashboardPage() {
             </div>
             <FichajeTimer
               startIso={entradaIso}
+              pauseAccumulatedMs={pauseAccumulatedMs}
+              pauseStartIso={pauseStartIso}
               className="mt-3 block text-3xl font-semibold text-slate-800"
             />
           </div>
@@ -240,21 +278,42 @@ export default async function DashboardPage() {
               <Clock size={14} className="text-slate-400" />
               Tiempo pausado
             </div>
-            <p className="mt-3 text-3xl font-semibold text-slate-500">00:00 Hrs</p>
+            <PausaTimer
+              pauseAccumulatedMs={pauseAccumulatedMs}
+              pauseStartIso={pauseStartIso}
+              className="mt-3 block text-3xl font-semibold text-slate-500"
+            />
           </div>
         </div>
 
-        <form action={toggleFichaje} className="mt-10">
-          <button
-            className={`w-full rounded-full py-5 text-lg font-semibold text-white shadow-2xl transition ${
-              ultimoFichaje
-                ? "bg-red-500 hover:bg-red-600 shadow-red-200/70"
-                : "bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 hover:brightness-110 shadow-sky-200/80"
-            }`}
-          >
-            {ultimoFichaje ? "Registrar Salida" : "Registrar entrada"}
-          </button>
-        </form>
+        {jornadaActiva ? (
+          <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <form action={togglePausa}>
+              <button
+                className={`flex w-full items-center justify-center gap-2 rounded-full py-5 text-lg font-semibold text-white shadow-2xl transition ${
+                  pausaActiva
+                    ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200/70"
+                    : "bg-teal-500 hover:bg-teal-600 shadow-teal-200/70"
+                }`}
+              >
+                {pausaActiva ? <Play size={18} /> : <Pause size={18} />}
+                {pausaActiva ? "Reanudar" : "Pausa"}
+              </button>
+            </form>
+            <form action={toggleFichaje}>
+              <button className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-indigo-600 py-5 text-lg font-semibold text-white shadow-2xl shadow-indigo-200/80 transition hover:brightness-110">
+                <Play size={18} className="rotate-180" />
+                Salir
+              </button>
+            </form>
+          </div>
+        ) : (
+          <form action={toggleFichaje} className="mt-10">
+            <button className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-5 text-lg font-semibold text-white shadow-2xl shadow-sky-200/80 transition hover:brightness-110">
+              Registrar entrada
+            </button>
+          </form>
+        )}
       </section>
 
       {role === "EMPLEADO" && (
