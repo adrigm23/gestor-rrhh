@@ -180,7 +180,7 @@ export default function Sidebar({
         aria-hidden={!mobileOpen}
       >
         <aside
-          className={`absolute left-0 top-0 h-full w-72 bg-[#0b1535] text-white shadow-2xl transition ${
+          className={`absolute left-0 top-0 flex h-full w-72 flex-col bg-[#0b1535] text-white shadow-2xl transition ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           onClick={(event) => event.stopPropagation()}
@@ -214,7 +214,7 @@ export default function Sidebar({
             </button>
           </div>
 
-          <nav className="space-y-6 px-6 py-6">
+          <nav className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
             <div className="space-y-2">
               {primaryItems.map((item) => {
                 const Icon = item.icon;
