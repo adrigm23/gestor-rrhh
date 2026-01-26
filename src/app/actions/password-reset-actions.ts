@@ -19,8 +19,23 @@ const RESET_MAX_REQUESTS = 3;
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
-const getAppUrl = () =>
-  process.env.APP_URL?.replace(/\/$/, "") || "http://localhost:3000";
+const getAppUrl = () => {
+  const direct = process.env.APP_URL?.trim();
+  if (direct) {
+    return direct.replace(/\/$/, "");
+  }
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    return `https://${vercel.replace(/\/$/, "")}`;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return "http://localhost:3000";
+  }
+
+  throw new Error("APP_URL no configurado");
+};
 
 export async function solicitarResetPassword(
   _prevState: PasswordResetState,

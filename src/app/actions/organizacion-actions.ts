@@ -4,6 +4,17 @@ import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { revalidatePath } from "next/cache";
 
+export type OrganizacionState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
+const emptySuccess: OrganizacionState = { status: "success" };
+const emptyError: OrganizacionState = { status: "error" };
+
+const normalizeNombre = (value?: string | null) =>
+  value?.toString().trim().replace(/\s+/g, " ") ?? "";
+
 const getEmpresaId = async (userId: string) => {
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
@@ -12,25 +23,32 @@ const getEmpresaId = async (userId: string) => {
   return usuario?.empresaId ?? null;
 };
 
-export async function crearCentroTrabajo(formData: FormData) {
+export async function crearCentroTrabajo(
+  _prevState: OrganizacionState,
+  formData: FormData,
+): Promise<OrganizacionState> {
   const session = await auth();
 
   if (!session?.user?.id || session.user?.role === "EMPLEADO") {
-    throw new Error("No autorizado");
+    return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = formData.get("nombre") as string;
+  const nombre = normalizeNombre(formData.get("nombre") as string);
   const gerenteId = (formData.get("gerenteId") as string) || null;
   const empresaIdFromForm = (formData.get("empresaId") as string) || null;
 
-  if (!nombre) return;
+  if (!nombre) {
+    return { ...emptyError, message: "Nombre requerido." };
+  }
 
   const empresaId =
     session.user.role === "ADMIN_SISTEMA"
       ? empresaIdFromForm
       : await getEmpresaId(session.user.id);
 
-  if (!empresaId) return;
+  if (!empresaId) {
+    return { ...emptyError, message: "Empresa requerida." };
+  }
 
   if (gerenteId) {
     const gerente = await prisma.usuario.findUnique({
@@ -39,8 +57,20 @@ export async function crearCentroTrabajo(formData: FormData) {
     });
 
     if (!gerente || gerente.rol !== "GERENTE" || gerente.empresaId !== empresaId) {
-      throw new Error("Gerente invalido");
+      return { ...emptyError, message: "Gerente invalido." };
     }
+  }
+
+  const existente = await prisma.centroTrabajo.findFirst({
+    where: {
+      empresaId,
+      nombre: { equals: nombre, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+
+  if (existente) {
+    return { ...emptyError, message: "Ya existe un centro con ese nombre." };
   }
 
   await prisma.centroTrabajo.create({
@@ -52,28 +82,36 @@ export async function crearCentroTrabajo(formData: FormData) {
   });
 
   revalidatePath("/dashboard/centros-trabajo");
+  return { ...emptySuccess, message: "Centro creado correctamente." };
 }
 
-export async function crearDepartamento(formData: FormData) {
+export async function crearDepartamento(
+  _prevState: OrganizacionState,
+  formData: FormData,
+): Promise<OrganizacionState> {
   const session = await auth();
 
   if (!session?.user?.id || session.user?.role === "EMPLEADO") {
-    throw new Error("No autorizado");
+    return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = formData.get("nombre") as string;
+  const nombre = normalizeNombre(formData.get("nombre") as string);
   const gerenteId = (formData.get("gerenteId") as string) || null;
   const centroTrabajoId = (formData.get("centroTrabajoId") as string) || null;
   const empresaIdFromForm = (formData.get("empresaId") as string) || null;
 
-  if (!nombre) return;
+  if (!nombre) {
+    return { ...emptyError, message: "Nombre requerido." };
+  }
 
   const empresaId =
     session.user.role === "ADMIN_SISTEMA"
       ? empresaIdFromForm
       : await getEmpresaId(session.user.id);
 
-  if (!empresaId) return;
+  if (!empresaId) {
+    return { ...emptyError, message: "Empresa requerida." };
+  }
 
   if (gerenteId) {
     const gerente = await prisma.usuario.findUnique({
@@ -82,7 +120,7 @@ export async function crearDepartamento(formData: FormData) {
     });
 
     if (!gerente || gerente.rol !== "GERENTE" || gerente.empresaId !== empresaId) {
-      throw new Error("Gerente invalido");
+      return { ...emptyError, message: "Gerente invalido." };
     }
   }
 
@@ -93,8 +131,20 @@ export async function crearDepartamento(formData: FormData) {
     });
 
     if (!centro || centro.empresaId !== empresaId) {
-      throw new Error("Centro de trabajo invalido");
+      return { ...emptyError, message: "Centro de trabajo invalido." };
     }
+  }
+
+  const existente = await prisma.departamento.findFirst({
+    where: {
+      empresaId,
+      nombre: { equals: nombre, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+
+  if (existente) {
+    return { ...emptyError, message: "Ya existe un departamento con ese nombre." };
   }
 
   await prisma.departamento.create({
@@ -107,4 +157,5 @@ export async function crearDepartamento(formData: FormData) {
   });
 
   revalidatePath("/dashboard/departamentos");
+  return { ...emptySuccess, message: "Departamento creado correctamente." };
 }

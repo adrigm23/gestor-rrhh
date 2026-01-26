@@ -18,6 +18,51 @@ const parseDateTime = (value?: string | null) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const normalizeText = (value?: string | null) => value?.toString().trim() ?? "";
+
+const isInvalidRange = (entrada: Date | null, salida: Date | null) =>
+  Boolean(entrada && salida && salida.getTime() <= entrada.getTime());
+
+const hasOverlap = async (
+  usuarioId: string,
+  entrada: Date | null,
+  salida: Date | null,
+  excludeId?: string | null,
+) => {
+  if (!entrada) return false;
+
+  const excludeClause = excludeId ? { not: excludeId } : undefined;
+  const baseWhere = {
+    usuarioId,
+    tipo: "JORNADA" as const,
+    ...(excludeClause ? { id: excludeClause } : {}),
+  };
+
+  if (!salida) {
+    const open = await prisma.fichaje.findFirst({
+      where: {
+        ...baseWhere,
+        salida: null,
+      },
+      select: { id: true },
+    });
+    return Boolean(open);
+  }
+
+  const overlap = await prisma.fichaje.findFirst({
+    where: {
+      ...baseWhere,
+      OR: [
+        { salida: null, entrada: { lt: salida } },
+        { entrada: { lt: salida }, salida: { gt: entrada } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  return Boolean(overlap);
+};
+
 const getEmpresaId = async (userId: string) => {
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
@@ -46,7 +91,7 @@ export async function crearSolicitudModificacion(
   const fichajeId = formData.get("fichajeId")?.toString() ?? "";
   const entradaValue = formData.get("entrada")?.toString() ?? "";
   const salidaValue = formData.get("salida")?.toString() ?? "";
-  const motivo = formData.get("motivo")?.toString() ?? "";
+  const motivo = normalizeText(formData.get("motivo")?.toString() ?? "");
 
   if (!empleadoId) {
     return { ...emptyError, message: "Selecciona un empleado." };
@@ -57,6 +102,10 @@ export async function crearSolicitudModificacion(
 
   if (!entradaPropuesta && !salidaPropuesta) {
     return { ...emptyError, message: "Indica al menos una hora." };
+  }
+
+  if (isInvalidRange(entradaPropuesta, salidaPropuesta)) {
+    return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
   }
 
   const empresaId =
@@ -131,13 +180,20 @@ export async function responderSolicitudModificacion(
   const solicitud = await prisma.solicitudModificacionFichaje.findUnique({
     where: { id: solicitudId },
     include: {
-      fichaje: { select: { id: true, usuarioId: true } },
+      fichaje: { select: { id: true, usuarioId: true, entrada: true, salida: true } },
     },
   });
 
   if (!solicitud || solicitud.empleadoId !== session.user.id) {
     return { ...emptyError, message: "No autorizado." };
   }
+
+  const fichajeActual = solicitud.fichaje
+    ? {
+        entrada: solicitud.fichaje.entrada,
+        salida: solicitud.fichaje.salida,
+      }
+    : null;
 
   if (solicitud.estado !== "PENDIENTE") {
     return { ...emptyError, message: "Solicitud ya respondida." };
@@ -166,6 +222,21 @@ export async function responderSolicitudModificacion(
   }
 
   if (solicitud.fichajeId) {
+    const entradaFinal = entradaPropuesta ?? fichajeActual?.entrada ?? null;
+    const salidaFinal = salidaPropuesta ?? fichajeActual?.salida ?? null;
+
+    if (!entradaFinal) {
+      return { ...emptyError, message: "Entrada requerida para actualizar fichaje." };
+    }
+
+    if (isInvalidRange(entradaFinal, salidaFinal)) {
+      return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
+    }
+
+    if (await hasOverlap(session.user.id, entradaFinal, salidaFinal, solicitud.fichajeId)) {
+      return { ...emptyError, message: "El rango se solapa con otro fichaje." };
+    }
+
     const updateData: {
       entrada?: Date;
       salida?: Date | null;
@@ -193,6 +264,14 @@ export async function responderSolicitudModificacion(
   } else {
     if (!entradaPropuesta) {
       return { ...emptyError, message: "Entrada requerida para crear fichaje." };
+    }
+
+    if (isInvalidRange(entradaPropuesta, salidaPropuesta)) {
+      return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
+    }
+
+    if (await hasOverlap(session.user.id, entradaPropuesta, salidaPropuesta, null)) {
+      return { ...emptyError, message: "El rango se solapa con otro fichaje." };
     }
 
     await prisma.fichaje.create({

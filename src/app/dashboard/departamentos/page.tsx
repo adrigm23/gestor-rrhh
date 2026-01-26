@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
-import { crearDepartamento } from "../../actions/organizacion-actions";
+import DepartamentoForm from "./departamento-form";
 
 export default async function DepartamentosPage() {
   const session = await auth();
@@ -86,94 +86,12 @@ export default async function DepartamentosPage() {
       </header>
 
       <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        <form
-          id="crear-departamento"
-          action={crearDepartamento}
-          className="space-y-6"
-        >
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">
-              Crear departamento
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Define el departamento y asigna un gerente si aplica.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Nombre</label>
-              <input
-                name="nombre"
-                type="text"
-                required
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                placeholder="Ej: Operaciones"
-              />
-            </div>
-            {role === "ADMIN_SISTEMA" && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Empresa</label>
-                <select
-                  name="empresaId"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                >
-                  <option value="">Selecciona empresa</option>
-                  {empresas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">
-                Gerente
-              </label>
-              <select
-                name="gerenteId"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option value="">Sin gerente</option>
-                {gerentes.map((gerente) => (
-                  <option key={gerente.id} value={gerente.id}>
-                    {gerente.nombre}
-                    {role === "ADMIN_SISTEMA"
-                      ? ` - ${gerente.empresa?.nombre ?? "Empresa"}`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">
-                Centro de trabajo
-              </label>
-              <select
-                name="centroTrabajoId"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option value="">Sin centro</option>
-                {centros.map((centro) => (
-                  <option key={centro.id} value={centro.id}>
-                    {centro.nombre}
-                    {role === "ADMIN_SISTEMA"
-                      ? ` - ${centro.empresa?.nombre ?? "Empresa"}`
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110"
-          >
-            Guardar departamento
-          </button>
-        </form>
+        <DepartamentoForm
+          role={role}
+          empresas={empresas}
+          centros={centros}
+          gerentes={gerentes}
+        />
 
         <div className="mt-10 rounded-3xl border border-slate-100 bg-white p-6">
           <div className="flex items-center justify-between text-sm text-slate-500">

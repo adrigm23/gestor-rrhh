@@ -2,15 +2,30 @@
 "use server";
 
 import { prisma } from "../lib/prisma";
-import { hashPassword } from "../utils/password"; // 👈 Mucho más corto y directo
+import { hashPassword } from "../utils/password";
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 
-export async function crearGerente(formData: FormData) {
+export type CrearUsuarioState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
+const emptySuccess: CrearUsuarioState = { status: "success" };
+const emptyError: CrearUsuarioState = { status: "error" };
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function crearUsuario(
+  _prevState: CrearUsuarioState,
+  formData: FormData,
+): Promise<CrearUsuarioState> {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("No autorizado");
+    return { ...emptyError, message: "No autorizado." };
   }
 
   const creador = await prisma.usuario.findUnique({
@@ -19,78 +34,62 @@ export async function crearGerente(formData: FormData) {
   });
 
   if (!creador || creador.rol !== "ADMIN_SISTEMA") {
-    throw new Error("No autorizado");
+    return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = formData.get("nombre")?.toString().trim() ?? "";
-  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
-  const password = formData.get("password")?.toString() ?? "";
-  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
-
-  if (!nombre || !email || !password || !empresaId) return;
-
-  try {
-    const hashedPassword = await hashPassword(password);
-
-    await prisma.usuario.create({
-      data: {
-        nombre,
-        email,
-        password: hashedPassword,
-        rol: "GERENTE", 
-        empresaId,      
-      }
-    });
-
-  } catch (error) {
-    console.error("Error al crear gerente:", error);
-    // Podrías devolver un objeto de error aquí si lo necesitas
-    return;
-  }
-
-  // Refrescamos los datos y podrías redirigir o simplemente limpiar el formulario
-  revalidatePath("/dashboard");
-}
-
-export async function crearEmpleado(formData: FormData) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error("No autorizado");
-  }
-
-  const nombre = formData.get("nombre")?.toString().trim() ?? "";
-  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const nombre = normalizeNombre(formData.get("nombre")?.toString() ?? "");
+  const email = normalizeEmail(formData.get("email")?.toString() ?? "");
   const password = formData.get("password")?.toString() ?? "";
   const departamentoId = formData.get("departamentoId")?.toString().trim() || null;
   const empresaIdForm = formData.get("empresaId")?.toString().trim() || null;
+  const rolRaw = formData.get("rol")?.toString().trim().toUpperCase() ?? "";
 
-  if (!nombre || !email || !password) return;
+  if (!nombre || !email || !password) {
+    return { ...emptyError, message: "Completa todos los campos obligatorios." };
+  }
 
-  const creador = await prisma.usuario.findUnique({
-    where: { id: session.user.id },
-    select: { rol: true, empresaId: true },
-  });
+  if (!emailRegex.test(email)) {
+    return { ...emptyError, message: "Email invalido." };
+  }
 
-  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
-    throw new Error("No autorizado");
+  if (password.length < 8) {
+    return { ...emptyError, message: "La contrasena debe tener 8 caracteres." };
   }
 
   if (!empresaIdForm) {
-    throw new Error("Empresa requerida");
+    return { ...emptyError, message: "Empresa requerida." };
+  }
+
+  let rol: "EMPLEADO" | "GERENTE";
+  if (rolRaw === "GERENTE") {
+    rol = "GERENTE";
+  } else if (rolRaw === "EMPLEADO") {
+    rol = "EMPLEADO";
+  } else {
+    return { ...emptyError, message: "Rol invalido." };
   }
 
   try {
-    const hashedPassword = await hashPassword(password);
+    const existente = await prisma.usuario.findUnique({
+      where: { email },
+      select: { id: true },
+    });
 
-    if (departamentoId) {
+    if (existente) {
+      return { ...emptyError, message: "Ese email ya esta en uso." };
+    }
+
+    const hashedPassword = await hashPassword(password);
+    const departamentoFinal = rol === "EMPLEADO" ? departamentoId : null;
+
+    if (departamentoFinal) {
       const departamento = await prisma.departamento.findUnique({
-        where: { id: departamentoId },
+        where: { id: departamentoFinal },
         select: { empresaId: true },
       });
 
       if (!departamento || departamento.empresaId !== empresaIdForm) {
-        throw new Error("Departamento invalido");
+        return { ...emptyError, message: "Departamento invalido." };
       }
     }
 
@@ -99,15 +98,16 @@ export async function crearEmpleado(formData: FormData) {
         nombre,
         email,
         password: hashedPassword,
-        rol: "EMPLEADO",
+        rol,
         empresaId: empresaIdForm,
-        departamentoId,
+        departamentoId: departamentoFinal,
       },
     });
   } catch (error) {
-    console.error("Error al crear empleado:", error);
-    return;
+    console.error("Error al crear usuario:", error);
+    return { ...emptyError, message: "No se pudo crear el usuario." };
   }
 
   revalidatePath("/dashboard/empleados");
+  return { ...emptySuccess, message: "Usuario creado correctamente." };
 }

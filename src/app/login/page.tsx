@@ -4,10 +4,12 @@ import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -92,21 +94,31 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@test.com"
+              placeholder="correo o mail"
               className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-white placeholder-white/30 outline-none transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
             />
           </div>
 
           <div className="space-y-2">
             <label className="ml-1 text-sm font-medium text-white/80">Contrasena</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-              className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 text-white placeholder-white/30 outline-none transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="********"
+                className="w-full rounded-2xl border border-white/20 bg-white/10 px-5 py-4 pr-12 text-white placeholder-white/30 outline-none transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/15 text-white/80 shadow-sm transition hover:bg-white/25 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-300"
+                aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <button

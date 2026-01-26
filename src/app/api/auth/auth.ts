@@ -12,6 +12,48 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+type AttemptEntry = {
+  count: number;
+  lastAttempt: number;
+  blockedUntil?: number;
+};
+
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_BLOCK_MS = 5 * 60 * 1000;
+const loginAttempts = new Map<string, AttemptEntry>();
+
+const isLoginBlocked = (key: string) => {
+  const entry = loginAttempts.get(key);
+  if (!entry?.blockedUntil) return false;
+  if (entry.blockedUntil <= Date.now()) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return true;
+};
+
+const recordLoginAttempt = (key: string, success: boolean) => {
+  if (success) {
+    loginAttempts.delete(key);
+    return;
+  }
+
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+
+  if (!current || now - current.lastAttempt > LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, lastAttempt: now });
+    return;
+  }
+
+  const nextCount = current.count + 1;
+  const blockedUntil =
+    nextCount >= LOGIN_MAX_ATTEMPTS ? now + LOGIN_BLOCK_MS : current.blockedUntil;
+
+  loginAttempts.set(key, { count: nextCount, lastAttempt: now, blockedUntil });
+};
+
 // 1. EXTENSIÓN DE TIPOS (Mantenemos tu código actual que está bien)
 declare module "next-auth" {
   interface Session {
@@ -48,6 +90,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = normalizeEmail(credentials.email as string);
+        if (isLoginBlocked(email)) {
+          await sleep(600);
+          return null;
+        }
 
         // Usamos la instancia centralizada
         const user = await prisma.usuario.findUnique({
@@ -55,6 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user || !user.password) {
+          recordLoginAttempt(email, false);
           await sleep(600);
           return null;
         }
@@ -65,10 +112,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!isPasswordCorrect) {
+          recordLoginAttempt(email, false);
           await sleep(600);
           return null;
         }
 
+        recordLoginAttempt(email, true);
         return {
           id: String(user.id),
           name: user.nombre,

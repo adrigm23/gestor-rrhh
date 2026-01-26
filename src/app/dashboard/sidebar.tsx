@@ -214,7 +214,10 @@ export default function Sidebar({
             </button>
           </div>
 
-          <nav className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+          <nav
+            className="flex-1 space-y-6 overflow-y-auto px-6 py-6 pb-24 overscroll-contain"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <div className="space-y-2">
               {primaryItems.map((item) => {
                 const Icon = item.icon;
