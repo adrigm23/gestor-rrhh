@@ -12,6 +12,7 @@ import {
   Pencil,
   ClipboardList,
   Users,
+  Building,
   Building2,
   MapPin,
   Settings,
@@ -23,6 +24,7 @@ type NavItem = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
+  adminOnly?: boolean;
 };
 
 const primaryItems: NavItem[] = [
@@ -42,6 +44,7 @@ const adminItems: NavItem[] = [
   { label: "Empleados", icon: Users, href: "/dashboard/empleados" },
   { label: "Departamentos", icon: Building2, href: "/dashboard/departamentos" },
   { label: "Centros de trabajo", icon: MapPin, href: "/dashboard/centros-trabajo" },
+  { label: "Empresas", icon: Building, href: "/dashboard/empresas", adminOnly: true },
 ];
 
 const systemItems: NavItem[] = [
@@ -77,6 +80,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const isEmpleado = role === "EMPLEADO";
+  const isAdmin = role === "ADMIN_SISTEMA";
 
   const renderLink = (item: NavItem) => {
     const Icon = item.icon;
@@ -157,7 +161,11 @@ export default function Sidebar({
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
                 Administracion
               </p>
-              <div className="space-y-2">{adminItems.map(renderLink)}</div>
+              <div className="space-y-2">
+                {adminItems
+                  .filter((item) => !item.adminOnly || isAdmin)
+                  .map(renderLink)}
+              </div>
             </div>
           )}
 
@@ -275,7 +283,9 @@ export default function Sidebar({
                   Administracion
                 </p>
                 <div className="space-y-2">
-                  {adminItems.map((item) => {
+                  {adminItems
+                    .filter((item) => !item.adminOnly || isAdmin)
+                    .map((item) => {
                     const Icon = item.icon;
                     const active = isActiveLink(pathname, item.href);
                     return (
