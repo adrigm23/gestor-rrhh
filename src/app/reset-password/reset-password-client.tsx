@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   resetPassword,
   type PasswordResetState,
@@ -18,6 +19,33 @@ export default function ResetPasswordClient({
   token,
 }: ResetPasswordClientProps) {
   const [state, action, pending] = useActionState(resetPassword, initialState);
+  const searchParams = useSearchParams();
+  const [resolvedToken, setResolvedToken] = useState(token);
+
+  const tokenFromQuery = useMemo(() => {
+    const param = searchParams?.get("token") ?? "";
+    return typeof param === "string" ? param : "";
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (resolvedToken) return;
+
+    if (tokenFromQuery) {
+      setResolvedToken(tokenFromQuery);
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash) {
+        const params = new URLSearchParams(hash.startsWith("?") ? hash : `?${hash}`);
+        const hashToken = params.get("token");
+        if (hashToken) {
+          setResolvedToken(hashToken);
+        }
+      }
+    }
+  }, [resolvedToken, tokenFromQuery]);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1535]">
@@ -55,7 +83,7 @@ export default function ResetPasswordClient({
           </p>
         </div>
 
-        {!token ? (
+        {!resolvedToken ? (
           <div className="rounded-2xl border border-red-400/40 bg-red-500/20 p-4 text-center text-sm text-red-100">
             El enlace no es valido. Solicita uno nuevo.
           </div>
@@ -74,7 +102,7 @@ export default function ResetPasswordClient({
             )}
 
             <form action={action} className="space-y-5">
-              <input type="hidden" name="token" value={token} />
+              <input type="hidden" name="token" value={resolvedToken} />
               <div className="space-y-2">
                 <label className="ml-1 text-sm font-medium text-white/80">
                   Nueva contrasena
