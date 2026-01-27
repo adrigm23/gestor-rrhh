@@ -17,6 +17,11 @@ const brandMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "mdmm | suma3 consultores",
   description: "mdmm: plataforma de control horario y gestion laboral.",
+  icons: {
+    icon: "/brand/suma3-logo.jpeg",
+    shortcut: "/brand/suma3-logo.jpeg",
+    apple: "/brand/suma3-logo.jpeg",
+  },
 };
 
 export const viewport = {
