@@ -59,6 +59,7 @@ export default async function FichajesPage({
 
   const role = session.user?.role ?? "";
   const isAdmin = role === "ADMIN_SISTEMA";
+  const isGerente = role === "GERENTE";
 
   const gerenteEmpresaId =
     role === "GERENTE"
@@ -189,6 +190,17 @@ export default async function FichajesPage({
   if (empleadoParam) exportParams.set("empleadoId", empleadoParam);
   const exportHref = `/api/fichajes/export?${exportParams.toString()}`;
 
+  const exportEmpresasParams = new URLSearchParams();
+  if (fromParam) exportEmpresasParams.set("from", fromParam);
+  if (toParam) exportEmpresasParams.set("to", toParam);
+  if (estadoParam !== "todos") exportEmpresasParams.set("estado", estadoParam);
+  if (tipoParam !== "todos") exportEmpresasParams.set("tipo", tipoParam);
+  const exportEmpresasEmpresaId = isAdmin ? empresaParam : empresaFiltro;
+  if (exportEmpresasEmpresaId) {
+    exportEmpresasParams.set("empresaId", exportEmpresasEmpresaId);
+  }
+  const exportEmpresasHref = `/api/fichajes/export-empresas?${exportEmpresasParams.toString()}`;
+
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -213,6 +225,14 @@ export default async function FichajesPage({
             >
               Descargar informe
             </button>
+          )}
+          {(isAdmin || isGerente) && (
+            <a
+              href={exportEmpresasHref}
+              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              Descargar por empresas
+            </a>
           )}
           <a
             href="#filtros"
