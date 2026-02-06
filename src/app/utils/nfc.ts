@@ -1,5 +1,4 @@
-"use server";
-
+import "server-only";
 import { createHmac } from "crypto";
 
 const normalizeNfcUid = (value: string) =>
