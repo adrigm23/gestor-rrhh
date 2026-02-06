@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   actualizarPassword,
   actualizarPerfil,
+  actualizarTarjetaNfc,
   type AjustesState,
 } from "../../actions/ajustes-actions";
 
@@ -23,6 +24,18 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
     actualizarPassword,
     initialState,
   );
+  const [nfcState, nfcAction, nfcPending] = useActionState(
+    actualizarTarjetaNfc,
+    initialState,
+  );
+  const [nfcUid, setNfcUid] = useState("");
+  const nfcInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (nfcState.status === "success") {
+      setNfcUid("");
+    }
+  }, [nfcState.status]);
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -136,6 +149,65 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
             className="w-full rounded-full bg-slate-900 py-3 text-sm font-semibold text-white shadow-xl shadow-slate-300/60 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {passwordPending ? "Actualizando..." : "Actualizar contrasena"}
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)] lg:col-span-2">
+        <h3 className="text-lg font-semibold text-slate-900">Tarjeta NFC</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Acerca tu tarjeta al lector para asociarla a tu cuenta.
+        </p>
+
+        {nfcState.message && (
+          <div
+            className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+              nfcState.status === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-100 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {nfcState.message}
+          </div>
+        )}
+
+        <form action={nfcAction} className="mt-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">
+              UID de tarjeta
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                ref={nfcInputRef}
+                name="nfcUid"
+                type="text"
+                value={nfcUid}
+                onChange={(event) => setNfcUid(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    (event.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+                  }
+                }}
+                inputMode="numeric"
+                placeholder="Pasa la tarjeta por el lector"
+                className="w-full flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              />
+              <button
+                type="button"
+                onClick={() => nfcInputRef.current?.focus()}
+                className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                Activar lector
+              </button>
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={nfcPending}
+            className="w-full rounded-full bg-gradient-to-r from-indigo-500 via-sky-500 to-sky-600 py-3 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {nfcPending ? "Guardando..." : "Asociar tarjeta NFC"}
           </button>
         </form>
       </section>

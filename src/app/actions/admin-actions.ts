@@ -3,6 +3,7 @@
 
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../utils/password";
+import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 
@@ -40,6 +41,7 @@ export async function crearUsuario(
   const nombre = normalizeNombre(formData.get("nombre")?.toString() ?? "");
   const email = normalizeEmail(formData.get("email")?.toString() ?? "");
   const password = formData.get("password")?.toString() ?? "";
+  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
   const departamentoId = formData.get("departamentoId")?.toString().trim() || null;
   const empresaIdForm = formData.get("empresaId")?.toString().trim() || null;
   const rolRaw = formData.get("rol")?.toString().trim().toUpperCase() ?? "";
@@ -58,6 +60,22 @@ export async function crearUsuario(
 
   if (!empresaIdForm) {
     return { ...emptyError, message: "Empresa requerida." };
+  }
+
+  const nfcUid = sanitizeNfcUid(nfcUidRaw);
+  let nfcUidHash: string | null = null;
+  if (nfcUid) {
+    if (nfcUid.length < 4 || nfcUid.length > 32) {
+      return { ...emptyError, message: "UID de tarjeta invalido." };
+    }
+    nfcUidHash = hashNfcUid(nfcUid);
+    const existenteUid = await prisma.usuario.findFirst({
+      where: { nfcUidHash },
+      select: { id: true },
+    });
+    if (existenteUid) {
+      return { ...emptyError, message: "Esa tarjeta ya esta asignada." };
+    }
   }
 
   let rol: "EMPLEADO" | "GERENTE";
@@ -101,6 +119,7 @@ export async function crearUsuario(
         rol,
         empresaId: empresaIdForm,
         departamentoId: departamentoFinal,
+        nfcUidHash,
       },
     });
   } catch (error) {

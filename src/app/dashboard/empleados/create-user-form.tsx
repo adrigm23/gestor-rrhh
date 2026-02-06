@@ -79,7 +79,7 @@ export default function CreateUserForm({
         {state.message ?? "Completa los datos para crear un usuario."}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-700">
             Nombre completo
@@ -110,6 +110,18 @@ export default function CreateUserForm({
             required
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
             placeholder="********"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700">
+            UID tarjeta (opcional)
+          </label>
+          <input
+            name="nfcUid"
+            type="text"
+            inputMode="numeric"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            placeholder="Pasa la tarjeta por el lector"
           />
         </div>
       </div>

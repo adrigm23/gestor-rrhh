@@ -4,6 +4,7 @@ import { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { comparePassword } from "../../../app/utils/password"; // Ajusta la ruta según tu estructura
 import { prisma } from "../../../app/lib/prisma"; // 👈 IMPORTA LA INSTANCIA GLOBAL
+import { hashNfcUid, sanitizeNfcUid } from "../../../app/utils/nfc";
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
@@ -123,6 +124,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.nombre,
           email: user.email,
           role: user.rol, // Mapeo de rol de DB a role de NextAuth
+        };
+      },
+    }),
+    Credentials({
+      id: "nfc",
+      name: "Tarjeta NFC",
+      credentials: {
+        uid: { label: "UID", type: "text" },
+      },
+      async authorize(credentials) {
+        const uidRaw = credentials?.uid?.toString() ?? "";
+        const uid = sanitizeNfcUid(uidRaw);
+
+        if (!uid) return null;
+
+        const uidHash = hashNfcUid(uid);
+        const key = `nfc:${uidHash}`;
+        if (isLoginBlocked(key)) {
+          await sleep(600);
+          return null;
+        }
+
+        const user = await prisma.usuario.findFirst({
+          where: { nfcUidHash: uidHash },
+        });
+
+        if (!user) {
+          recordLoginAttempt(key, false);
+          await sleep(600);
+          return null;
+        }
+
+        recordLoginAttempt(key, true);
+        return {
+          id: String(user.id),
+          name: user.nombre,
+          email: user.email,
+          role: user.rol,
         };
       },
     }),

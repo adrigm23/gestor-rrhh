@@ -25,6 +25,7 @@ model Usuario {
   nombre     String
   email      String    @unique
   password   String
+  nfcUidHash String?   @unique
   rol        Rol       @default(EMPLEADO)
   empresaId  String
   empresa    Empresa   @relation(fields: [empresaId], references: [id])

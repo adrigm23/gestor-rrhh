@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -12,7 +12,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [nfcUid, setNfcUid] = useState("");
+  const [nfcError, setNfcError] = useState("");
+  const [nfcLoading, setNfcLoading] = useState(false);
+  const nfcInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (nfcInputRef.current) {
+      nfcInputRef.current.setAttribute("autocomplete", "off");
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +48,35 @@ export default function LoginPage() {
       setError("Ocurrio un error inesperado.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleNfcLogin = async () => {
+    const uid = nfcUid.trim();
+    setNfcError("");
+
+    if (!uid) {
+      setNfcError("Acerca tu tarjeta al lector.");
+      return;
+    }
+
+    setNfcLoading(true);
+    try {
+      const result = await signIn("nfc", {
+        uid,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setNfcError("Tarjeta no reconocida.");
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (err) {
+      setNfcError("No se pudo iniciar sesion con tarjeta.");
+    } finally {
+      setNfcLoading(false);
     }
   };
 
@@ -129,6 +168,63 @@ export default function LoginPage() {
             {isLoading ? "Validando..." : "Iniciar sesion"}
           </button>
         </form>
+
+        <div className="my-6 flex items-center gap-4 text-xs text-white/40">
+          <div className="h-px flex-1 bg-white/10" />
+          <span>o</span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">
+              Acceso con tarjeta NFC
+            </h2>
+            <p className="mt-1 text-xs text-white/60">
+              Acerca tu tarjeta al lector para iniciar sesion.
+            </p>
+          </div>
+
+          {nfcError && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/15 px-3 py-2 text-xs text-red-100">
+              {nfcError}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              ref={nfcInputRef}
+              type="text"
+              value={nfcUid}
+              onChange={(e) => setNfcUid(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleNfcLogin();
+                }
+              }}
+              inputMode="numeric"
+              placeholder="Pasa la tarjeta por el lector"
+              className="w-full flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 outline-none transition focus:ring-2 focus:ring-teal-300"
+            />
+            <button
+              type="button"
+              onClick={() => nfcInputRef.current?.focus()}
+              className="rounded-2xl border border-white/20 px-4 py-3 text-xs font-semibold text-white/80 transition hover:border-white/40 hover:bg-white/10"
+            >
+              Activar lector
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNfcLogin}
+            disabled={nfcLoading}
+            className="flex w-full items-center justify-center rounded-2xl bg-white/15 py-3 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-white/25 disabled:opacity-60"
+          >
+            {nfcLoading ? "Leyendo tarjeta..." : "Entrar con tarjeta"}
+          </button>
+        </div>
 
         <div className="mt-4 text-center text-xs text-white/70">
           <a href="/forgot-password" className="hover:text-white">

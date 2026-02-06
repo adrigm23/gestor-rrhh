@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { comparePassword, hashPassword } from "../utils/password";
+import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
 
 export type AjustesState = {
   status: "idle" | "error" | "success";
@@ -99,4 +100,44 @@ export async function actualizarPassword(
 
   revalidatePath("/dashboard/ajustes");
   return { ...emptySuccess, message: "Contrasena actualizada." };
+}
+
+export async function actualizarTarjetaNfc(
+  _prevState: AjustesState,
+  formData: FormData,
+): Promise<AjustesState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyError, message: "Debes iniciar sesion." };
+  }
+
+  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
+  const nfcUid = sanitizeNfcUid(nfcUidRaw);
+
+  if (!nfcUid) {
+    return { ...emptyError, message: "Acerca la tarjeta al lector." };
+  }
+
+  if (nfcUid.length < 4 || nfcUid.length > 32) {
+    return { ...emptyError, message: "UID de tarjeta invalido." };
+  }
+
+  const nfcUidHash = hashNfcUid(nfcUid);
+  const existente = await prisma.usuario.findFirst({
+    where: { nfcUidHash },
+    select: { id: true },
+  });
+
+  if (existente && existente.id !== session.user.id) {
+    return { ...emptyError, message: "Esa tarjeta ya esta asignada." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: session.user.id },
+    data: { nfcUidHash },
+  });
+
+  revalidatePath("/dashboard/ajustes");
+  return { ...emptySuccess, message: "Tarjeta NFC asociada correctamente." };
 }
