@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import CreateUserForm from "./create-user-form";
 import { prisma } from "../../lib/prisma";
+import NfcAssignForm from "./nfc-assign-form";
 
 export default async function EmpleadosPage() {
   const session = await auth();
@@ -40,6 +41,7 @@ export default async function EmpleadosPage() {
       email: true,
       rol: true,
       createdAt: true,
+      nfcUidHash: true,
       empresa: { select: { nombre: true } },
       departamento: { select: { nombre: true } },
     },
@@ -126,6 +128,11 @@ export default async function EmpleadosPage() {
                     <th className="px-4 py-3 text-left font-semibold">
                       Departamento
                     </th>
+                    {role === "ADMIN_SISTEMA" && (
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Tarjeta
+                      </th>
+                    )}
                     <th className="px-4 py-3 text-left font-semibold">
                       Alta
                     </th>
@@ -147,6 +154,14 @@ export default async function EmpleadosPage() {
                       <td className="px-4 py-3">
                         {usuario.departamento?.nombre ?? "Sin departamento"}
                       </td>
+                      {role === "ADMIN_SISTEMA" && (
+                        <td className="px-4 py-3">
+                          <NfcAssignForm
+                            usuarioId={usuario.id}
+                            tieneTarjeta={Boolean(usuario.nfcUidHash)}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         {usuario.createdAt.toLocaleDateString("es-ES")}
                       </td>

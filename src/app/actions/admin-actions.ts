@@ -12,8 +12,15 @@ export type CrearUsuarioState = {
   message?: string;
 };
 
+export type AsignarTarjetaState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
+const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
+const emptyAssignError: AsignarTarjetaState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -129,4 +136,81 @@ export async function crearUsuario(
 
   revalidatePath("/dashboard/empleados");
   return { ...emptySuccess, message: "Usuario creado correctamente." };
+}
+
+export async function asignarTarjetaUsuario(
+  _prevState: AsignarTarjetaState,
+  formData: FormData,
+): Promise<AsignarTarjetaState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyAssignError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyAssignError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const mode = formData.get("mode")?.toString() ?? "assign";
+  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
+
+  if (!usuarioId) {
+    return { ...emptyAssignError, message: "Usuario invalido." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyAssignError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyAssignError, message: "No se permite en este usuario." };
+  }
+
+  if (mode === "clear") {
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { nfcUidHash: null },
+    });
+    revalidatePath("/dashboard/empleados");
+    return { ...emptyAssignSuccess, message: "Tarjeta desvinculada." };
+  }
+
+  const nfcUid = sanitizeNfcUid(nfcUidRaw);
+  if (!nfcUid) {
+    return { ...emptyAssignError, message: "Acerca la tarjeta al lector." };
+  }
+
+  if (nfcUid.length < 4 || nfcUid.length > 32) {
+    return { ...emptyAssignError, message: "UID de tarjeta invalido." };
+  }
+
+  const nfcUidHash = hashNfcUid(nfcUid);
+  const existenteUid = await prisma.usuario.findFirst({
+    where: { nfcUidHash },
+    select: { id: true },
+  });
+
+  if (existenteUid && existenteUid.id !== usuarioId) {
+    return { ...emptyAssignError, message: "Esa tarjeta ya esta asignada." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: { nfcUidHash },
+  });
+
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyAssignSuccess, message: "Tarjeta asociada." };
 }
