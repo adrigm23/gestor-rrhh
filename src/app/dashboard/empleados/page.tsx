@@ -4,6 +4,7 @@ import { auth } from "../../api/auth/auth";
 import CreateUserForm from "./create-user-form";
 import { prisma } from "../../lib/prisma";
 import NfcAssignForm from "./nfc-assign-form";
+import EmpresaAssignForm from "./empresa-assign-form";
 
 export default async function EmpleadosPage() {
   const session = await auth();
@@ -42,6 +43,7 @@ export default async function EmpleadosPage() {
       rol: true,
       createdAt: true,
       nfcUidHash: true,
+      empresaId: true,
       empresa: { select: { nombre: true } },
       departamento: { select: { nombre: true } },
     },
@@ -149,7 +151,15 @@ export default async function EmpleadosPage() {
                         {usuario.rol === "GERENTE" ? "Gerente" : "Empleado"}
                       </td>
                       <td className="px-4 py-3">
-                        {usuario.empresa?.nombre ?? "Sin empresa"}
+                        {role === "ADMIN_SISTEMA" ? (
+                          <EmpresaAssignForm
+                            usuarioId={usuario.id}
+                            empresaIdActual={usuario.empresaId}
+                            empresas={empresas}
+                          />
+                        ) : (
+                          usuario.empresa?.nombre ?? "Sin empresa"
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {usuario.departamento?.nombre ?? "Sin departamento"}

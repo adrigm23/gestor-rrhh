@@ -9,8 +9,15 @@ export type EmpresaState = {
   message?: string;
 };
 
+export type EliminarEmpresaState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: EmpresaState = { status: "success" };
 const emptyError: EmpresaState = { status: "error" };
+const emptyDeleteSuccess: EliminarEmpresaState = { status: "success" };
+const emptyDeleteError: EliminarEmpresaState = { status: "error" };
 
 const normalizeNombre = (value?: string | null) =>
   value?.toString().trim().replace(/\s+/g, " ") ?? "";
@@ -88,4 +95,69 @@ export async function crearEmpresa(
   revalidatePath("/dashboard/departamentos");
   revalidatePath("/dashboard/empleados");
   return { ...emptySuccess, message: "Empresa creada correctamente." };
+}
+
+export async function eliminarEmpresa(
+  _prevState: EliminarEmpresaState,
+  formData: FormData,
+): Promise<EliminarEmpresaState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyDeleteError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyDeleteError, message: "No autorizado." };
+  }
+
+  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
+
+  if (!empresaId) {
+    return { ...emptyDeleteError, message: "Empresa invalida." };
+  }
+
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: empresaId },
+    select: {
+      id: true,
+      _count: {
+        select: { usuarios: true, departamentos: true, centrosTrabajo: true },
+      },
+    },
+  });
+
+  if (!empresa) {
+    return { ...emptyDeleteError, message: "Empresa no encontrada." };
+  }
+
+  if (
+    empresa._count.usuarios > 0 ||
+    empresa._count.departamentos > 0 ||
+    empresa._count.centrosTrabajo > 0
+  ) {
+    return {
+      ...emptyDeleteError,
+      message:
+        "No se puede eliminar: hay usuarios, departamentos o centros asociados.",
+    };
+  }
+
+  try {
+    await prisma.empresa.delete({ where: { id: empresaId } });
+  } catch (error) {
+    console.error("Error al eliminar empresa:", error);
+    return { ...emptyDeleteError, message: "No se pudo eliminar la empresa." };
+  }
+
+  revalidatePath("/dashboard/empresas");
+  revalidatePath("/dashboard/centros-trabajo");
+  revalidatePath("/dashboard/departamentos");
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyDeleteSuccess, message: "Empresa eliminada." };
 }

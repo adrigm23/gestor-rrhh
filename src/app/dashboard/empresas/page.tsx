@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import EmpresaForm from "./empresa-form";
+import EmpresaDeleteForm from "./empresa-delete-form";
 
 export default async function EmpresasPage() {
   const session = await auth();
@@ -68,6 +69,9 @@ export default async function EmpresasPage() {
                       Departamentos
                     </th>
                     <th className="px-4 py-3 text-left font-semibold">Centros</th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -84,6 +88,9 @@ export default async function EmpresasPage() {
                       </td>
                       <td className="px-4 py-3">
                         {empresa._count.centrosTrabajo}
+                      </td>
+                      <td className="px-4 py-3">
+                        <EmpresaDeleteForm empresaId={empresa.id} />
                       </td>
                     </tr>
                   ))}

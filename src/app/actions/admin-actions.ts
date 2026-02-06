@@ -17,10 +17,17 @@ export type AsignarTarjetaState = {
   message?: string;
 };
 
+export type CambiarEmpresaState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
 const emptyAssignError: AsignarTarjetaState = { status: "error" };
+const emptyChangeSuccess: CambiarEmpresaState = { status: "success" };
+const emptyChangeError: CambiarEmpresaState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -213,4 +220,88 @@ export async function asignarTarjetaUsuario(
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyAssignSuccess, message: "Tarjeta asociada." };
+}
+
+export async function cambiarEmpresaUsuario(
+  _prevState: CambiarEmpresaState,
+  formData: FormData,
+): Promise<CambiarEmpresaState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyChangeError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyChangeError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
+
+  if (!usuarioId || !empresaId) {
+    return { ...emptyChangeError, message: "Datos incompletos." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true, departamentoId: true, empresaId: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyChangeError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyChangeError, message: "No se permite en este usuario." };
+  }
+
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: empresaId },
+    select: { id: true },
+  });
+
+  if (!empresa) {
+    return { ...emptyChangeError, message: "Empresa invalida." };
+  }
+
+  let departamentoId: string | null = usuario.departamentoId ?? null;
+  if (departamentoId) {
+    const departamento = await prisma.departamento.findUnique({
+      where: { id: departamentoId },
+      select: { empresaId: true },
+    });
+    if (!departamento || departamento.empresaId !== empresaId) {
+      departamentoId = null;
+    }
+  }
+
+  if (usuario.rol === "GERENTE") {
+    await prisma.departamento.updateMany({
+      where: { gerenteId: usuarioId, empresaId: { not: empresaId } },
+      data: { gerenteId: null },
+    });
+    await prisma.centroTrabajo.updateMany({
+      where: { gerenteId: usuarioId, empresaId: { not: empresaId } },
+      data: { gerenteId: null },
+    });
+  }
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: {
+      empresaId,
+      departamentoId,
+    },
+  });
+
+  revalidatePath("/dashboard/empleados");
+  revalidatePath("/dashboard/departamentos");
+  revalidatePath("/dashboard/centros-trabajo");
+  return { ...emptyChangeSuccess, message: "Empresa actualizada." };
 }
