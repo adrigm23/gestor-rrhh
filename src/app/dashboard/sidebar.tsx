@@ -15,6 +15,7 @@ import {
   Building,
   Building2,
   MapPin,
+  CreditCard,
   Settings,
   Menu,
   X,
@@ -48,6 +49,7 @@ const adminItems: NavItem[] = [
 ];
 
 const systemItems: NavItem[] = [
+  { label: "Kiosko NFC", icon: CreditCard, href: "/dashboard/kiosko" },
   { label: "Ajustes", icon: Settings, href: "/dashboard/ajustes" },
 ];
 
