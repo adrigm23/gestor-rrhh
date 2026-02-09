@@ -61,11 +61,13 @@ declare module "next-auth" {
     user: {
       id?: string;
       role?: string;
+      empresaId?: string | null;
     } & DefaultSession["user"];
   }
   interface User {
     id?: string;
     role?: string;
+    empresaId?: string | null;
   }
 }
 
@@ -73,6 +75,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    empresaId?: string | null;
   }
 }
 
@@ -124,6 +127,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.nombre,
           email: user.email,
           role: user.rol, // Mapeo de rol de DB a role de NextAuth
+          empresaId: user.empresaId ?? null,
         };
       },
     }),
@@ -162,6 +166,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.nombre,
           email: user.email,
           role: user.rol,
+          empresaId: user.empresaId ?? null,
         };
       },
     }),
@@ -171,6 +176,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.empresaId = user.empresaId ?? null;
       }
       return token;
     },
@@ -181,6 +187,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           session.user.id = userId;
         }
         session.user.role = token.role;
+        session.user.empresaId = token.empresaId ?? null;
       }
       return session;
     },
