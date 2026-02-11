@@ -6,7 +6,6 @@ import { prisma } from "../lib/prisma";
 import {
   createSignedUrl,
   deleteJustificante,
-  uploadJustificante,
 } from "../lib/supabase-storage";
 
 export type SolicitudState = {
@@ -102,7 +101,11 @@ export async function notificarAusencia(
   const inicioValue = formData.get("inicio")?.toString() ?? "";
   const finValue = formData.get("fin")?.toString() ?? "";
   const motivo = formData.get("motivo")?.toString() ?? "";
-  const justificante = formData.get("justificante") as File | null;
+  const ausenciaTipoRaw = formData.get("ausenciaTipo")?.toString() ?? "";
+  const ausenciaTipo =
+    ausenciaTipoRaw === "FALTA" || ausenciaTipoRaw === "AVISO"
+      ? (ausenciaTipoRaw as "FALTA" | "AVISO")
+      : null;
 
   const inicio = parseDate(inicioValue);
   const fin = parseDate(finValue) ?? inicio;
@@ -119,18 +122,29 @@ export async function notificarAusencia(
     return { ...emptyError, message: "La fecha de fin no puede ser menor." };
   }
 
-  const shouldUpload = justificante && justificante.size > 0;
+  if (!ausenciaTipo) {
+    return {
+      ...emptyError,
+      message: "Selecciona si has faltado o si vas a faltar.",
+    };
+  }
 
   try {
-    let uploadResult: {
-      ruta: string;
-      nombre: string;
-      mime: string;
-      size: number;
-    } | null = null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (shouldUpload) {
-      uploadResult = await uploadJustificante(justificante, session.user.id);
+    if (ausenciaTipo === "FALTA" && inicio.getTime() > today.getTime()) {
+      return {
+        ...emptyError,
+        message: "La fecha de inicio no puede ser futura si ya has faltado.",
+      };
+    }
+
+    if (ausenciaTipo === "AVISO" && inicio.getTime() < today.getTime()) {
+      return {
+        ...emptyError,
+        message: "La fecha de inicio no puede ser pasada si vas a faltar.",
+      };
     }
 
     await prisma.solicitud.create({
@@ -140,10 +154,7 @@ export async function notificarAusencia(
         inicio,
         fin,
         motivo: motivo || null,
-        justificanteNombre: uploadResult?.nombre ?? null,
-        justificanteRuta: uploadResult?.ruta ?? null,
-        justificanteMime: uploadResult?.mime ?? null,
-        justificanteSize: uploadResult?.size ?? null,
+        ausenciaTipo,
       },
     });
   } catch (error) {

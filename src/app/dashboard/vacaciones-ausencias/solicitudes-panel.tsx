@@ -15,6 +15,7 @@ export type SolicitudPendiente = {
   inicio: string;
   fin: string | null;
   motivo: string | null;
+  ausenciaTipo: "FALTA" | "AVISO" | null;
   justificanteNombre: string | null;
   justificanteRuta: string | null;
   usuarioNombre: string;
@@ -201,6 +202,13 @@ export default function SolicitudesPanel({
                   <p className="text-xs uppercase tracking-wider text-slate-400">
                     Motivo
                   </p>
+                  {item.tipo === "AUSENCIA" && item.ausenciaTipo && (
+                    <p className="text-xs text-slate-500">
+                      {item.ausenciaTipo === "FALTA"
+                        ? "He faltado"
+                        : "Voy a faltar"}
+                    </p>
+                  )}
                   <p className="text-sm text-slate-700">
                     {item.motivo || "Sin motivo"}
                   </p>

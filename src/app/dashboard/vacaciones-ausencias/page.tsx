@@ -67,6 +67,7 @@ export default async function VacacionesAusenciasPage() {
     inicio: item.inicio.toISOString(),
     fin: item.fin ? item.fin.toISOString() : null,
     motivo: item.motivo ?? null,
+    ausenciaTipo: item.ausenciaTipo ?? null,
     justificanteNombre: item.justificanteNombre ?? null,
     justificanteRuta: item.justificanteRuta ?? null,
     usuarioNombre: item.usuario.nombre,

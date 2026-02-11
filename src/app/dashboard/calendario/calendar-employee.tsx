@@ -21,6 +21,7 @@ export type SolicitudResumen = {
   fin: string | null;
   createdAt: string;
   motivo: string | null;
+  ausenciaTipo: "FALTA" | "AVISO" | null;
 };
 
 type CalendarioEmpleadoProps = {
@@ -288,12 +289,25 @@ export default function CalendarioEmpleado({
 
       {tab === "ausencia" && (
         <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-          <form
-            action={ausAction}
-            encType="multipart/form-data"
-            className="space-y-6"
-          >
+          <form action={ausAction} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-semibold text-slate-700">
+                  Tipo de ausencia (obligatorio)
+                </label>
+                <select
+                  name="ausenciaTipo"
+                  required
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="FALTA">He faltado</option>
+                  <option value="AVISO">Voy a faltar</option>
+                </select>
+                <p className="text-xs text-slate-400">
+                  Indica si la ausencia ya ha ocurrido o es un aviso futuro.
+                </p>
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">
                   Fecha de inicio (obligatorio)
@@ -325,19 +339,10 @@ export default function CalendarioEmpleado({
                 >
                   <option value="">Seleccionar...</option>
                   <option value="Medico">Medico</option>
+                  <option value="Baja medica">Baja medica</option>
                   <option value="Personal">Personal</option>
                   <option value="Otro">Otro</option>
                 </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">
-                  Justificante
-                </label>
-                <input
-                  name="justificante"
-                  type="file"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 file:mr-3 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-slate-600"
-                />
               </div>
             </div>
 
@@ -384,6 +389,13 @@ export default function CalendarioEmpleado({
                   <p className="text-xs text-slate-500">
                     {formatRange(item)}
                   </p>
+                  {item.tipo === "AUSENCIA" && item.ausenciaTipo && (
+                    <p className="text-xs text-slate-400">
+                      {item.ausenciaTipo === "FALTA"
+                        ? "He faltado"
+                        : "Voy a faltar"}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[item.estado]}`}

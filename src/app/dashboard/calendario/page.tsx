@@ -30,6 +30,7 @@ export default async function CalendarioPage() {
     fin: item.fin ? item.fin.toISOString() : null,
     createdAt: item.createdAt.toISOString(),
     motivo: item.motivo ?? null,
+    ausenciaTipo: item.ausenciaTipo ?? null,
   }));
 
   return <CalendarioEmpleado solicitudes={resumen} />;

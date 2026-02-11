@@ -68,6 +68,7 @@ model Solicitud {
   inicio              DateTime
   fin                 DateTime?
   motivo              String?
+  ausenciaTipo        TipoAusencia?
   justificanteNombre  String?
   justificanteRuta    String?
   justificanteMime    String?
@@ -157,6 +158,11 @@ enum TipoFichaje {
 enum TipoSolicitud {
   VACACIONES
   AUSENCIA
+}
+
+enum TipoAusencia {
+  FALTA
+  AVISO
 }
 
 enum EstadoSolicitud {

@@ -89,7 +89,7 @@ export default function LoginPage() {
         <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl animate-pulse" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-10 lg:flex-row lg:items-center lg:gap-12">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-10 box-border lg:flex-row lg:items-center lg:gap-12">
         {/* Panel de marca (solo desktop) */}
         <section className="hidden flex-1 flex-col justify-center text-white lg:flex">
           <div className="flex items-center gap-4">
