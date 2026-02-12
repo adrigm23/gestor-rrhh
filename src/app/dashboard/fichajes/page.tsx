@@ -4,14 +4,12 @@ import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import ExportAsyncPanel from "./export-async-panel";
 
-type SearchParams = {
-  from?: string;
-  to?: string;
-  empleadoId?: string;
-  empresaId?: string;
-  estado?: string;
-  tipo?: string;
-};
+export const dynamic = "force-dynamic";
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+const getParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 const formatDuration = (entrada: Date, salida?: Date | null) => {
   if (!salida) return "En curso";
@@ -78,12 +76,12 @@ export default async function FichajesPage({
   defaultFromDate.setDate(today.getDate() - 7);
   const defaultFrom = defaultFromDate.toISOString().slice(0, 10);
 
-  const fromParam = searchParams.from ?? defaultFrom;
-  const toParam = searchParams.to ?? defaultTo;
-  const estadoParam = searchParams.estado ?? "todos";
-  const tipoParam = searchParams.tipo ?? "todos";
-  const empresaParam = searchParams.empresaId ?? "";
-  const empleadoParam = searchParams.empleadoId ?? "";
+  const fromParam = getParam(searchParams.from) ?? defaultFrom;
+  const toParam = getParam(searchParams.to) ?? defaultTo;
+  const estadoParam = getParam(searchParams.estado) ?? "todos";
+  const tipoParam = getParam(searchParams.tipo) ?? "todos";
+  const empresaParam = getParam(searchParams.empresaId) ?? "";
+  const empleadoParam = getParam(searchParams.empleadoId) ?? "";
 
   const empresaFiltro = isAdmin ? empresaParam : gerenteEmpresaId ?? "";
 
