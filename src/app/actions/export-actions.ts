@@ -1,5 +1,6 @@
 "use server";
 
+import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { createSignedUrl, uploadExportCsv } from "../lib/supabase-storage";
@@ -80,13 +81,7 @@ const buildWhereClause = (filters: ExportFilters, empresaId?: string | null) => 
     hasta = temp;
   }
 
-  const whereClause: {
-    usuario?: { empresaId: string };
-    usuarioId?: string;
-    entrada?: { gte?: Date; lte?: Date };
-    salida?: { equals?: null; not?: null };
-    tipo?: string;
-  } = {};
+  const whereClause: Prisma.FichajeWhereInput = {};
 
   if (empresaId) {
     whereClause.usuario = { empresaId };
@@ -110,9 +105,14 @@ const buildWhereClause = (filters: ExportFilters, empresaId?: string | null) => 
   }
 
   if (tipoParam !== "todos") {
-    const allowed = ["JORNADA", "PAUSA_COMIDA", "DESCANSO", "MEDICO"];
-    if (allowed.includes(tipoParam)) {
-      whereClause.tipo = tipoParam;
+    const allowed: TipoFichaje[] = [
+      "JORNADA",
+      "PAUSA_COMIDA",
+      "DESCANSO",
+      "MEDICO",
+    ];
+    if (allowed.includes(tipoParam as TipoFichaje)) {
+      whereClause.tipo = tipoParam as TipoFichaje;
     }
   }
 
