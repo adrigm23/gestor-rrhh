@@ -46,3 +46,55 @@ export const sendPasswordResetEmail = async (params: {
     text,
   });
 };
+
+const formatMb = (value: number) => `${value.toFixed(2)} MB`;
+
+export const sendDbUsageAlertEmail = async (params: {
+  to: string;
+  stats: {
+    mb: number;
+    limitMb: number;
+    percent: number;
+    level: string;
+    planLabel: string;
+  };
+}) => {
+  if (!isConfigured()) {
+    console.warn("SMTP no configurado. Email de alerta no enviado.");
+    return false;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+  });
+
+  const subjectPrefix =
+    params.stats.level === "critical"
+      ? "ALERTA CRITICA"
+      : params.stats.level === "high"
+        ? "Alerta alta"
+        : "Aviso";
+
+  const text = [
+    `${subjectPrefix}: uso de base de datos`,
+    "",
+    `Plan: ${params.stats.planLabel}`,
+    `Uso actual: ${formatMb(params.stats.mb)}`,
+    `Limite configurado: ${formatMb(params.stats.limitMb)}`,
+    `Porcentaje: ${params.stats.percent.toFixed(1)}%`,
+    "",
+    "Recomendacion: actualiza el plan antes de llegar al modo solo lectura.",
+  ].join("\n");
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to: params.to,
+    subject: `${subjectPrefix} - Uso de base de datos`,
+    text,
+  });
+
+  return true;
+};

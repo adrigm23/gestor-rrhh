@@ -42,6 +42,7 @@ model Usuario {
   contratos  Contrato[]
   gerenteDepartamentos Departamento[] @relation("DepartamentoGerente")
   gerenteCentros CentroTrabajo[] @relation("CentroGerente")
+  exportacionesSolicitadas Exportacion[]
   createdAt  DateTime  @default(now())
 }
 
@@ -143,6 +144,14 @@ model Exportacion {
   error           String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+}
+
+model DbUsageAlert {
+  id            String   @id
+  lastLevel     String?
+  lastSizeMb    Float?
+  lastNotifiedAt DateTime?
+  updatedAt     DateTime @updatedAt
 }
 
 model Departamento {

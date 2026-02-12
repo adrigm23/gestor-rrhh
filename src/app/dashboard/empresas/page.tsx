@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import EmpresaForm from "./empresa-form";
 import EmpresaDeleteForm from "./empresa-delete-form";
 import EmpresaConfigForm from "./empresa-config-form";
+import DbUsageCard from "./db-usage-card";
 
 export default async function EmpresasPage() {
   const session = await auth();
@@ -45,6 +46,8 @@ export default async function EmpresasPage() {
           Crear empresa
         </a>
       </header>
+
+      <DbUsageCard />
 
       <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
         <EmpresaForm />
