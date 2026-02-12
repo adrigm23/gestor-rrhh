@@ -1,12 +1,14 @@
+import { TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 
-type SearchParams = {
-  from?: string;
-  to?: string;
-  empleadoId?: string;
-};
+export const dynamic = "force-dynamic";
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+const getParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 const parseDate = (value: string | undefined, endOfDay: boolean) => {
   if (!value) return null;
@@ -36,6 +38,27 @@ const formatHours = (ms: number) => {
   return `${totalHours.toFixed(2)} h`;
 };
 
+const formatTipo = (tipo: TipoFichaje) => {
+  switch (tipo) {
+    case "PAUSA_COMIDA":
+      return "Pausa comida";
+    case "DESCANSO":
+      return "Descanso";
+    case "MEDICO":
+      return "Medico";
+    default:
+      return "Jornada";
+  }
+};
+
+const formatDuration = (ms: number) => {
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const padded = (value: number) => value.toString().padStart(2, "0");
+  return `${padded(hours)}:${padded(minutes)} Hrs`;
+};
+
 const clampRange = (start: Date, end: Date, now: Date) => {
   const safeEnd = end.getTime() > now.getTime() ? now : end;
   return { start, end: safeEnd };
@@ -63,8 +86,12 @@ export default async function EscritorioPage({
   const defaultStart = startOfWeek(now);
   const defaultEnd = endOfWeek(now);
 
-  const from = parseDate(searchParams.from, false) ?? defaultStart;
-  const to = parseDate(searchParams.to, true) ?? defaultEnd;
+  const fromParam = getParam(searchParams.from);
+  const toParam = getParam(searchParams.to);
+  const empleadoParam = getParam(searchParams.empleadoId);
+
+  const from = parseDate(fromParam, false) ?? defaultStart;
+  const to = parseDate(toParam, true) ?? defaultEnd;
 
   const range = clampRange(from, to, now);
 
@@ -99,9 +126,7 @@ export default async function EscritorioPage({
       : [];
 
   const empleadoId =
-    role === "GERENTE"
-      ? searchParams.empleadoId ?? empleados[0]?.id ?? ""
-      : userId;
+    role === "GERENTE" ? empleadoParam ?? empleados[0]?.id ?? "" : userId;
 
   const empleado = await prisma.usuario.findUnique({
     where: { id: empleadoId },
@@ -130,9 +155,8 @@ export default async function EscritorioPage({
       usuarioId: empleadoId,
       entrada: { lte: range.end },
       OR: [{ salida: null }, { salida: { gte: range.start } }],
-      tipo: { in: ["JORNADA", "PAUSA_COMIDA"] },
     },
-    orderBy: { entrada: "asc" },
+    orderBy: { entrada: "desc" },
   });
 
   let jornadaMs = 0;
@@ -150,7 +174,7 @@ export default async function EscritorioPage({
 
     if (fichaje.tipo === "PAUSA_COMIDA") {
       pausaMs += duration;
-    } else {
+    } else if (fichaje.tipo === "JORNADA") {
       jornadaMs += duration;
     }
   }
@@ -285,6 +309,79 @@ export default async function EscritorioPage({
             )}
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-slate-900">
+            Fichajes del tramo
+          </h3>
+          <span className="text-sm text-slate-500">
+            {fichajes.length} registros
+          </span>
+        </div>
+
+        {fichajes.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-6 text-sm text-slate-500">
+            No hay fichajes en el periodo seleccionado.
+          </div>
+        ) : (
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">Entrada</th>
+                  <th className="px-4 py-3 text-left font-semibold">Salida</th>
+                  <th className="px-4 py-3 text-left font-semibold">Tipo</th>
+                  <th className="px-4 py-3 text-left font-semibold">Tiempo</th>
+                  <th className="px-4 py-3 text-left font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {fichajes.map((fichaje) => {
+                  const start = Math.max(
+                    fichaje.entrada.getTime(),
+                    range.start.getTime(),
+                  );
+                  const end = Math.min(
+                    (fichaje.salida ?? now).getTime(),
+                    range.end.getTime(),
+                  );
+                  const duration = Math.max(0, end - start);
+                  return (
+                    <tr key={fichaje.id} className="text-slate-600">
+                      <td className="px-4 py-3">
+                        {fichaje.entrada.toLocaleString("es-ES")}
+                      </td>
+                      <td className="px-4 py-3">
+                        {fichaje.salida
+                          ? fichaje.salida.toLocaleString("es-ES")
+                          : "En curso"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatTipo(fichaje.tipo)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {fichaje.salida ? formatDuration(duration) : "En curso"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            fichaje.salida
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {fichaje.salida ? "Cerrado" : "Abierto"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );
