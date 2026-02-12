@@ -5,6 +5,7 @@ import CreateUserForm from "./create-user-form";
 import { prisma } from "../../lib/prisma";
 import NfcAssignForm from "./nfc-assign-form";
 import EmpresaAssignForm from "./empresa-assign-form";
+import ContratoForm from "./contrato-form";
 
 export default async function EmpleadosPage() {
   const session = await auth();
@@ -46,6 +47,11 @@ export default async function EmpleadosPage() {
       empresaId: true,
       empresa: { select: { nombre: true } },
       departamento: { select: { nombre: true } },
+      contratos: {
+        orderBy: { fechaInicio: "desc" },
+        take: 1,
+        select: { horasSemanales: true, fechaInicio: true },
+      },
     },
   });
 
@@ -130,6 +136,9 @@ export default async function EmpleadosPage() {
                     <th className="px-4 py-3 text-left font-semibold">
                       Departamento
                     </th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      Contrato
+                    </th>
                     {role === "ADMIN_SISTEMA" && (
                       <th className="px-4 py-3 text-left font-semibold">
                         Tarjeta
@@ -163,6 +172,17 @@ export default async function EmpleadosPage() {
                       </td>
                       <td className="px-4 py-3">
                         {usuario.departamento?.nombre ?? "Sin departamento"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ContratoForm
+                          usuarioId={usuario.id}
+                          horasActuales={usuario.contratos[0]?.horasSemanales ?? null}
+                          fechaInicioActual={
+                            usuario.contratos[0]?.fechaInicio
+                              ? usuario.contratos[0].fechaInicio.toISOString().slice(0, 10)
+                              : null
+                          }
+                        />
                       </td>
                       {role === "ADMIN_SISTEMA" && (
                         <td className="px-4 py-3">

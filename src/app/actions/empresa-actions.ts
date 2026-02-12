@@ -14,10 +14,17 @@ export type EliminarEmpresaState = {
   message?: string;
 };
 
+export type EmpresaConfigState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: EmpresaState = { status: "success" };
 const emptyError: EmpresaState = { status: "error" };
 const emptyDeleteSuccess: EliminarEmpresaState = { status: "success" };
 const emptyDeleteError: EliminarEmpresaState = { status: "error" };
+const emptyConfigSuccess: EmpresaConfigState = { status: "success" };
+const emptyConfigError: EmpresaConfigState = { status: "error" };
 
 const normalizeNombre = (value?: string | null) =>
   value?.toString().trim().replace(/\s+/g, " ") ?? "";
@@ -160,4 +167,50 @@ export async function eliminarEmpresa(
   revalidatePath("/dashboard/departamentos");
   revalidatePath("/dashboard/empleados");
   return { ...emptyDeleteSuccess, message: "Empresa eliminada." };
+}
+
+export async function actualizarPausaEmpresa(
+  _prevState: EmpresaConfigState,
+  formData: FormData,
+): Promise<EmpresaConfigState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyConfigError, message: "No autorizado." };
+  }
+
+  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
+  const valorRaw = formData.get("pausaCuenta")?.toString() ?? "true";
+  const pausaCuenta = valorRaw === "true" || valorRaw === "1";
+
+  if (!empresaId) {
+    return { ...emptyConfigError, message: "Empresa invalida." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true, empresaId: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyConfigError, message: "No autorizado." };
+  }
+
+  if (usuario.rol === "GERENTE" && usuario.empresaId !== empresaId) {
+    return { ...emptyConfigError, message: "No autorizado." };
+  }
+
+  if (usuario.rol !== "ADMIN_SISTEMA" && usuario.rol !== "GERENTE") {
+    return { ...emptyConfigError, message: "No autorizado." };
+  }
+
+  await prisma.empresa.update({
+    where: { id: empresaId },
+    data: { pausaCuentaComoTrabajo: pausaCuenta },
+  });
+
+  revalidatePath("/dashboard/empresas");
+  revalidatePath("/dashboard/ajustes");
+  revalidatePath("/dashboard/escritorio");
+  return { ...emptyConfigSuccess, message: "Preferencia actualizada." };
 }

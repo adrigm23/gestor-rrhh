@@ -3,6 +3,7 @@ import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import EmpresaForm from "./empresa-form";
 import EmpresaDeleteForm from "./empresa-delete-form";
+import EmpresaConfigForm from "./empresa-config-form";
 
 export default async function EmpresasPage() {
   const session = await auth();
@@ -21,6 +22,7 @@ export default async function EmpresasPage() {
       nombre: true,
       cif: true,
       plan: true,
+      pausaCuentaComoTrabajo: true,
       createdAt: true,
       _count: { select: { usuarios: true, departamentos: true, centrosTrabajo: true } },
     },
@@ -64,6 +66,9 @@ export default async function EmpresasPage() {
                     <th className="px-4 py-3 text-left font-semibold">Nombre</th>
                     <th className="px-4 py-3 text-left font-semibold">CIF</th>
                     <th className="px-4 py-3 text-left font-semibold">Plan</th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      Pausa
+                    </th>
                     <th className="px-4 py-3 text-left font-semibold">Usuarios</th>
                     <th className="px-4 py-3 text-left font-semibold">
                       Departamentos
@@ -82,6 +87,12 @@ export default async function EmpresasPage() {
                       </td>
                       <td className="px-4 py-3 uppercase">{empresa.cif}</td>
                       <td className="px-4 py-3">{empresa.plan}</td>
+                      <td className="px-4 py-3">
+                        <EmpresaConfigForm
+                          empresaId={empresa.id}
+                          pausaCuentaComoTrabajo={empresa.pausaCuentaComoTrabajo}
+                        />
+                      </td>
                       <td className="px-4 py-3">{empresa._count.usuarios}</td>
                       <td className="px-4 py-3">
                         {empresa._count.departamentos}

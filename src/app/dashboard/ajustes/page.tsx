@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import AjustesForms from "./ajustes-forms";
+import EmpresaConfigForm from "../empresas/empresa-config-form";
 
 export default async function AjustesPage() {
   const session = await auth();
@@ -13,7 +14,7 @@ export default async function AjustesPage() {
   const usuario = await prisma.usuario.findUnique({
     where: { id: session.user?.id ?? "" },
     include: {
-      empresa: { select: { nombre: true } },
+      empresa: { select: { nombre: true, id: true, pausaCuentaComoTrabajo: true } },
       departamento: { select: { nombre: true } },
     },
   });
@@ -75,6 +76,23 @@ export default async function AjustesPage() {
       </section>
 
       <AjustesForms nombre={usuario.nombre} email={usuario.email} />
+
+      {usuario.rol === "GERENTE" && usuario.empresa && (
+        <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+          <h3 className="text-lg font-semibold text-slate-900">
+            Configuracion de empresa
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Define si la pausa cuenta como tiempo trabajado para tu empresa.
+          </p>
+          <div className="mt-6 max-w-sm">
+            <EmpresaConfigForm
+              empresaId={usuario.empresa.id}
+              pausaCuentaComoTrabajo={usuario.empresa.pausaCuentaComoTrabajo}
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

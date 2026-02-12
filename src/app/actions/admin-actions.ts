@@ -22,12 +22,19 @@ export type CambiarEmpresaState = {
   message?: string;
 };
 
+export type ContratoState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
 const emptyAssignError: AsignarTarjetaState = { status: "error" };
 const emptyChangeSuccess: CambiarEmpresaState = { status: "success" };
 const emptyChangeError: CambiarEmpresaState = { status: "error" };
+const emptyContratoSuccess: ContratoState = { status: "success" };
+const emptyContratoError: ContratoState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -59,6 +66,7 @@ export async function crearUsuario(
   const departamentoId = formData.get("departamentoId")?.toString().trim() || null;
   const empresaIdForm = formData.get("empresaId")?.toString().trim() || null;
   const rolRaw = formData.get("rol")?.toString().trim().toUpperCase() ?? "";
+  const horasSemanalesRaw = formData.get("horasSemanales")?.toString() ?? "";
 
   if (!nombre || !email || !password) {
     return { ...emptyError, message: "Completa todos los campos obligatorios." };
@@ -101,6 +109,18 @@ export async function crearUsuario(
     return { ...emptyError, message: "Rol invalido." };
   }
 
+  const horasSemanales = Number.parseFloat(
+    horasSemanalesRaw.replace(",", "."),
+  );
+  if (rol === "EMPLEADO") {
+    if (!Number.isFinite(horasSemanales) || horasSemanales <= 0) {
+      return { ...emptyError, message: "Horas semanales invalidas." };
+    }
+    if (horasSemanales > 60) {
+      return { ...emptyError, message: "Las horas semanales son demasiado altas." };
+    }
+  }
+
   try {
     const existente = await prisma.usuario.findUnique({
       where: { email },
@@ -125,16 +145,28 @@ export async function crearUsuario(
       }
     }
 
-    await prisma.usuario.create({
-      data: {
-        nombre,
-        email,
-        password: hashedPassword,
-        rol,
-        empresaId: empresaIdForm,
-        departamentoId: departamentoFinal,
-        nfcUidHash,
-      },
+    await prisma.$transaction(async (tx) => {
+      const usuario = await tx.usuario.create({
+        data: {
+          nombre,
+          email,
+          password: hashedPassword,
+          rol,
+          empresaId: empresaIdForm,
+          departamentoId: departamentoFinal,
+          nfcUidHash,
+        },
+      });
+
+      if (rol === "EMPLEADO") {
+        await tx.contrato.create({
+          data: {
+            usuarioId: usuario.id,
+            horasSemanales,
+            fechaInicio: new Date(),
+          },
+        });
+      }
     });
   } catch (error) {
     console.error("Error al crear usuario:", error);
@@ -304,4 +336,93 @@ export async function cambiarEmpresaUsuario(
   revalidatePath("/dashboard/departamentos");
   revalidatePath("/dashboard/centros-trabajo");
   return { ...emptyChangeSuccess, message: "Empresa actualizada." };
+}
+
+const parseDateInput = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+export async function crearContrato(
+  _prevState: ContratoState,
+  formData: FormData,
+): Promise<ContratoState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyContratoError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const horasRaw = formData.get("horasSemanales")?.toString() ?? "";
+  const fechaInicioRaw = formData.get("fechaInicio")?.toString() ?? "";
+
+  if (!usuarioId) {
+    return { ...emptyContratoError, message: "Empleado invalido." };
+  }
+
+  const horasSemanales = Number.parseFloat(horasRaw.replace(",", "."));
+  if (!Number.isFinite(horasSemanales) || horasSemanales <= 0) {
+    return { ...emptyContratoError, message: "Horas semanales invalidas." };
+  }
+  if (horasSemanales > 60) {
+    return { ...emptyContratoError, message: "Las horas semanales son demasiado altas." };
+  }
+
+  const fechaInicio = parseDateInput(fechaInicioRaw) ?? new Date();
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true, empresaId: true },
+  });
+
+  if (!creador || (creador.rol !== "ADMIN_SISTEMA" && creador.rol !== "GERENTE")) {
+    return { ...emptyContratoError, message: "No autorizado." };
+  }
+
+  const empleado = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true, empresaId: true },
+  });
+
+  if (!empleado || empleado.rol !== "EMPLEADO") {
+    return { ...emptyContratoError, message: "Empleado invalido." };
+  }
+
+  if (creador.rol === "GERENTE" && creador.empresaId !== empleado.empresaId) {
+    return { ...emptyContratoError, message: "Empleado fuera de tu empresa." };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const contratoActivo = await tx.contrato.findFirst({
+        where: { usuarioId, fechaFin: null },
+        orderBy: { fechaInicio: "desc" },
+      });
+
+      if (contratoActivo) {
+        const fechaFin = new Date(fechaInicio.getTime() - 1);
+        await tx.contrato.update({
+          where: { id: contratoActivo.id },
+          data: { fechaFin },
+        });
+      }
+
+      await tx.contrato.create({
+        data: {
+          usuarioId,
+          horasSemanales,
+          fechaInicio,
+        },
+      });
+    });
+  } catch (error) {
+    console.error("Error creando contrato:", error);
+    return { ...emptyContratoError, message: "No se pudo crear el contrato." };
+  }
+
+  revalidatePath("/dashboard/empleados");
+  revalidatePath("/dashboard/escritorio");
+  return { ...emptyContratoSuccess, message: "Contrato actualizado." };
 }

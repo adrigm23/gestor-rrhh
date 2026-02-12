@@ -14,6 +14,7 @@ model Empresa {
   nombre    String
   cif       String    @unique
   plan      String    @default("FREE")
+  pausaCuentaComoTrabajo Boolean @default(true)
   usuarios  Usuario[]
   departamentos Departamento[]
   centrosTrabajo CentroTrabajo[]
@@ -38,6 +39,7 @@ model Usuario {
   solicitudesFichajeRespondidas SolicitudModificacionFichaje[] @relation("RespondedorSolicitudFichaje")
   passwordResetTokens PasswordResetToken[]
   justificanteAccesos JustificanteAcceso[]
+  contratos  Contrato[]
   gerenteDepartamentos Departamento[] @relation("DepartamentoGerente")
   gerenteCentros CentroTrabajo[] @relation("CentroGerente")
   createdAt  DateTime  @default(now())
@@ -118,6 +120,31 @@ model JustificanteAcceso {
   createdAt   DateTime            @default(now())
 }
 
+model Contrato {
+  id             String   @id @default(cuid())
+  usuarioId      String
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  horasSemanales Float
+  fechaInicio    DateTime
+  fechaFin       DateTime?
+  createdAt      DateTime @default(now())
+}
+
+model Exportacion {
+  id              String          @id @default(cuid())
+  tipo            TipoExportacion
+  estado          EstadoExportacion @default(PENDIENTE)
+  solicitadoPorId String
+  solicitadoPor   Usuario         @relation(fields: [solicitadoPorId], references: [id])
+  empresaId       String?
+  empleadoId      String?
+  filtros         Json?
+  archivoRuta     String?
+  error           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
 model Departamento {
   id             String        @id @default(cuid())
   nombre         String
@@ -180,4 +207,16 @@ enum EstadoSolicitudFichaje {
 enum AccionJustificante {
   VER
   BORRAR
+}
+
+enum TipoExportacion {
+  FICHAJES
+  FICHAJES_EMPRESAS
+}
+
+enum EstadoExportacion {
+  PENDIENTE
+  GENERANDO
+  LISTO
+  ERROR
 }

@@ -159,3 +159,28 @@ export const deleteJustificante = async (ruta: string) => {
     throw new Error(`Error eliminando archivo: ${errorText}`);
   }
 };
+
+export const uploadExportCsv = async (content: string, ruta: string) => {
+  requireConfig();
+
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        apikey: SERVICE_ROLE_KEY,
+        "Content-Type": "text/csv",
+        "x-upsert": "true",
+      },
+      body: Buffer.from(content),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error subiendo exportacion: ${errorText}`);
+  }
+
+  return ruta;
+};

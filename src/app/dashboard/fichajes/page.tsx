@@ -2,6 +2,7 @@ import { Prisma, TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import ExportAsyncPanel from "./export-async-panel";
 
 type SearchParams = {
   from?: string;
@@ -181,25 +182,14 @@ export default async function FichajesPage({
     ? await prisma.fichaje.count({ where: whereClause })
     : 0;
 
-  const exportParams = new URLSearchParams();
-  if (fromParam) exportParams.set("from", fromParam);
-  if (toParam) exportParams.set("to", toParam);
-  if (estadoParam !== "todos") exportParams.set("estado", estadoParam);
-  if (tipoParam !== "todos") exportParams.set("tipo", tipoParam);
-  if (empresaFiltro) exportParams.set("empresaId", empresaFiltro);
-  if (empleadoParam) exportParams.set("empleadoId", empleadoParam);
-  const exportHref = `/api/fichajes/export?${exportParams.toString()}`;
-
-  const exportEmpresasParams = new URLSearchParams();
-  if (fromParam) exportEmpresasParams.set("from", fromParam);
-  if (toParam) exportEmpresasParams.set("to", toParam);
-  if (estadoParam !== "todos") exportEmpresasParams.set("estado", estadoParam);
-  if (tipoParam !== "todos") exportEmpresasParams.set("tipo", tipoParam);
-  const exportEmpresasEmpresaId = isAdmin ? empresaParam : empresaFiltro;
-  if (exportEmpresasEmpresaId) {
-    exportEmpresasParams.set("empresaId", exportEmpresasEmpresaId);
-  }
-  const exportEmpresasHref = `/api/fichajes/export-empresas?${exportEmpresasParams.toString()}`;
+  const exportFilters = {
+    from: fromParam,
+    to: toParam,
+    estado: estadoParam,
+    tipo: tipoParam,
+    empresaId: empresaFiltro,
+    empleadoId: empleadoParam,
+  };
 
   return (
     <div className="space-y-8">
@@ -210,30 +200,12 @@ export default async function FichajesPage({
           </p>
           <h2 className="text-3xl font-semibold text-slate-900">Fichajes</h2>
         </div>
-        <div className="flex items-center gap-3">
-          {canQuery ? (
-            <a
-              href={exportHref}
-              className="rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"
-            >
-              Descargar informe
-            </a>
-          ) : (
-            <button
-              disabled
-              className="cursor-not-allowed rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-white/80"
-            >
-              Descargar informe
-            </button>
-          )}
-          {(isAdmin || isGerente) && (
-            <a
-              href={exportEmpresasHref}
-              className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              Descargar por empresas
-            </a>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <ExportAsyncPanel
+            filters={exportFilters}
+            canQuery={canQuery}
+            showEmpresas={isAdmin || isGerente}
+          />
           <a
             href="#filtros"
             className="rounded-full bg-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"

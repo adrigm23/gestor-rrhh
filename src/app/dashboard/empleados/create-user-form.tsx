@@ -29,6 +29,7 @@ export default function CreateUserForm({
   const [state, formAction, isPending] = useActionState(crearUsuario, initialState);
   const [rol, setRol] = useState<"EMPLEADO" | "GERENTE">("EMPLEADO");
   const [empresaId, setEmpresaId] = useState("");
+  const [horasSemanales, setHorasSemanales] = useState("40");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function CreateUserForm({
       formRef.current?.reset();
       setRol("EMPLEADO");
       setEmpresaId("");
+      setHorasSemanales("40");
     }
   }, [state.status]);
 
@@ -159,6 +161,26 @@ export default function CreateUserForm({
             <option value="GERENTE">Gerente</option>
           </select>
         </div>
+
+        {rol === "EMPLEADO" && (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">
+              Horas semanales contrato
+            </label>
+            <input
+              name="horasSemanales"
+              type="number"
+              min="1"
+              max="60"
+              step="0.5"
+              required
+              value={horasSemanales}
+              onChange={(event) => setHorasSemanales(event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              placeholder="40"
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-700">
