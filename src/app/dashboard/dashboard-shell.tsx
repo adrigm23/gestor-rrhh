@@ -42,7 +42,7 @@ export default function DashboardShell({
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
       <div className="flex min-h-screen flex-col md:flex-row">
         <Sidebar
           role={role}
@@ -51,7 +51,7 @@ export default function DashboardShell({
           onOpen={() => setMobileMenuOpen(true)}
         />
 
-        <div className="flex min-h-screen flex-1 flex-col">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
             <HeaderActions
               userName={userName}
@@ -59,7 +59,7 @@ export default function DashboardShell({
             />
           </header>
 
-          <main className="flex-1 px-4 pb-24 pt-6 sm:px-6 md:px-10 md:pb-10">
+          <main className="flex-1 overflow-x-hidden px-4 pb-24 pt-6 sm:px-6 md:px-10 md:pb-10">
             {children}
           </main>
 

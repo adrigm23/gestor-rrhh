@@ -125,7 +125,7 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="force-mobile-hidden hidden w-full bg-[#0b1535] text-white shadow-[0_24px_80px_rgba(10,20,48,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:overflow-y-auto">
+      <aside className="force-mobile-hidden hidden w-full bg-[#0b1535] text-white shadow-[0_24px_80px_rgba(10,20,48,0.35)] md:sticky md:top-0 md:block md:h-screen md:w-64 md:shrink-0 md:flex md:flex-col md:overflow-hidden">
         <div className="flex items-center gap-3 border-b border-white/10 px-6 py-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
             <Image
@@ -146,7 +146,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        <nav className="space-y-6 px-6 py-6">
+        <nav className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
           <div className="space-y-2">{primaryItems.map(renderLink)}</div>
 
           {!isEmpleado && (
