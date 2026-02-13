@@ -4,6 +4,7 @@ import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -85,13 +86,18 @@ export default async function EscritorioPage({
   const now = new Date();
   const defaultStart = startOfWeek(now);
   const defaultEnd = endOfWeek(now);
+  const defaultFromValue = defaultStart.toISOString().slice(0, 10);
+  const defaultToValue = defaultEnd.toISOString().slice(0, 10);
 
   const fromParam = getParam(searchParams.from);
   const toParam = getParam(searchParams.to);
   const empleadoParam = getParam(searchParams.empleadoId);
 
-  const from = parseDate(fromParam, false) ?? defaultStart;
-  const to = parseDate(toParam, true) ?? defaultEnd;
+  const fromValue = fromParam ?? defaultFromValue;
+  const toValue = toParam ?? defaultToValue;
+
+  const from = parseDate(fromValue, false) ?? defaultStart;
+  const to = parseDate(toValue, true) ?? defaultEnd;
 
   const range = clampRange(from, to, now);
 
@@ -150,7 +156,7 @@ export default async function EscritorioPage({
     orderBy: { fechaInicio: "desc" },
   });
 
-  const fichajes = await prisma.fichaje.findMany({
+  const fichajesResumen = await prisma.fichaje.findMany({
     where: {
       usuarioId: empleadoId,
       entrada: { lte: range.end },
@@ -159,10 +165,23 @@ export default async function EscritorioPage({
     orderBy: { entrada: "desc" },
   });
 
+  const tableStart = startOfWeek(range.end);
+  const tableEnd = endOfWeek(range.end);
+  const tableRange = clampRange(tableStart, tableEnd, now);
+
+  const fichajes = await prisma.fichaje.findMany({
+    where: {
+      usuarioId: empleadoId,
+      entrada: { lte: tableRange.end },
+      OR: [{ salida: null }, { salida: { gte: tableRange.start } }],
+    },
+    orderBy: { entrada: "desc" },
+  });
+
   let jornadaMs = 0;
   let pausaMs = 0;
 
-  for (const fichaje of fichajes) {
+  for (const fichaje of fichajesResumen) {
     const start = Math.max(fichaje.entrada.getTime(), range.start.getTime());
     const end = Math.min(
       (fichaje.salida ?? now).getTime(),
@@ -188,6 +207,7 @@ export default async function EscritorioPage({
       : null;
 
   const rangeLabel = `${range.start.toLocaleDateString("es-ES")} - ${range.end.toLocaleDateString("es-ES")}`;
+  const tableLabel = `${tableRange.start.toLocaleDateString("es-ES")} - ${tableRange.end.toLocaleDateString("es-ES")}`;
 
   return (
     <div className="space-y-8">
@@ -224,22 +244,22 @@ export default async function EscritorioPage({
           )}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">Desde</label>
-            <input
-              type="date"
-              name="from"
-              defaultValue={range.start.toISOString().slice(0, 10)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Hasta</label>
-            <input
-              type="date"
-              name="to"
-              defaultValue={range.end.toISOString().slice(0, 10)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-            />
-          </div>
+              <input
+                type="date"
+                name="from"
+                defaultValue={fromValue}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Hasta</label>
+              <input
+                type="date"
+                name="to"
+                defaultValue={toValue}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              />
+            </div>
           <div className="flex items-end">
             <button
               type="submit"
@@ -316,9 +336,10 @@ export default async function EscritorioPage({
           <h3 className="text-lg font-semibold text-slate-900">
             Fichajes del tramo
           </h3>
-          <span className="text-sm text-slate-500">
-            {fichajes.length} registros
-          </span>
+          <div className="text-right text-xs text-slate-500">
+            <div>{tableLabel}</div>
+            <div>{fichajes.length} registros</div>
+          </div>
         </div>
 
         {fichajes.length === 0 ? (
