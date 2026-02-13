@@ -42,7 +42,7 @@ export default function DashboardShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
       <div className="flex min-h-screen flex-col md:flex-row">
         <Sidebar
           role={role}
