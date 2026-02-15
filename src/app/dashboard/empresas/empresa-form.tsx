@@ -35,7 +35,7 @@ export default function EmpresaForm() {
       <div>
         <h3 className="text-lg font-semibold text-slate-900">Crear empresa</h3>
         <p className="mt-1 text-sm text-slate-500">
-          Registra la empresa y asigna el plan inicial.
+          Registra la empresa en el sistema.
         </p>
       </div>
 
@@ -67,18 +67,6 @@ export default function EmpresaForm() {
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm uppercase text-slate-700 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200"
             placeholder="B12345678"
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700">Plan</label>
-          <select
-            name="plan"
-            defaultValue="FREE"
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200"
-          >
-            <option value="FREE">Free</option>
-            <option value="PRO">Pro</option>
-            <option value="ENTERPRISE">Enterprise</option>
-          </select>
         </div>
       </div>
 

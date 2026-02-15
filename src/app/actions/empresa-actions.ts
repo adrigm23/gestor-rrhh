@@ -32,8 +32,6 @@ const normalizeNombre = (value?: string | null) =>
 const normalizeCif = (value?: string | null) =>
   value?.toString().trim().toUpperCase() ?? "";
 
-const allowedPlans = new Set(["FREE", "PRO", "ENTERPRISE"]);
-
 export async function crearEmpresa(
   _prevState: EmpresaState,
   formData: FormData,
@@ -55,7 +53,6 @@ export async function crearEmpresa(
 
   const nombre = normalizeNombre(formData.get("nombre") as string);
   const cif = normalizeCif(formData.get("cif") as string);
-  const planRaw = formData.get("plan")?.toString().trim().toUpperCase() ?? "FREE";
 
   if (!nombre || !cif) {
     return { ...emptyError, message: "Nombre y CIF son obligatorios." };
@@ -64,8 +61,6 @@ export async function crearEmpresa(
   if (cif.length < 6) {
     return { ...emptyError, message: "CIF invalido." };
   }
-
-  const plan = allowedPlans.has(planRaw) ? planRaw : "FREE";
 
   const existente = await prisma.empresa.findFirst({
     where: {
@@ -89,7 +84,6 @@ export async function crearEmpresa(
       data: {
         nombre,
         cif,
-        plan,
       },
     });
   } catch (error) {

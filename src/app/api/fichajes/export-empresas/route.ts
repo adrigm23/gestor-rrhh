@@ -65,6 +65,14 @@ export async function GET(request: Request) {
   const estadoParam = searchParams.get("estado") ?? "todos";
   const tipoParam = searchParams.get("tipo") ?? "todos";
   const empresaParam = searchParams.get("empresaId") ?? "";
+  const limitParam = searchParams.get("limit");
+  const defaultLimit = 20000;
+  const maxLimit = 25000;
+  const parsedLimit = Number.parseInt(limitParam ?? "", 10);
+  const limit =
+    Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, maxLimit)
+      : defaultLimit;
 
   const gerenteEmpresaId =
     role === "GERENTE"
@@ -130,6 +138,7 @@ export async function GET(request: Request) {
       },
     },
     orderBy: { entrada: "desc" },
+    take: limit,
   });
 
   const resumen = new Map<string, EmpresaResumen>();
@@ -205,6 +214,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
+      "X-Export-Limit": String(limit),
     },
   });
 }

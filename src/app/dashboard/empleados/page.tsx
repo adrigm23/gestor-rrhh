@@ -7,7 +7,16 @@ import NfcAssignForm from "./nfc-assign-form";
 import EmpresaAssignForm from "./empresa-assign-form";
 import ContratoForm from "./contrato-form";
 
-export default async function EmpleadosPage() {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+const getParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+
+export default async function EmpleadosPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const session = await auth();
 
   if (!session) {
@@ -19,6 +28,7 @@ export default async function EmpleadosPage() {
   }
 
   const role = session.user?.role ?? "";
+  const query = (getParam(searchParams.q) ?? "").trim();
   const gerenteEmpresaId =
     role === "GERENTE"
       ? (
@@ -32,9 +42,30 @@ export default async function EmpleadosPage() {
   const usuarios = await prisma.usuario.findMany({
     where:
       role === "ADMIN_SISTEMA"
-        ? { rol: { in: ["EMPLEADO", "GERENTE"] } }
+        ? {
+            rol: { in: ["EMPLEADO", "GERENTE"] },
+            ...(query
+              ? {
+                  OR: [
+                    { nombre: { contains: query, mode: "insensitive" } },
+                    { email: { contains: query, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          }
         : gerenteEmpresaId
-          ? { rol: "EMPLEADO", empresaId: gerenteEmpresaId }
+          ? {
+              rol: "EMPLEADO",
+              empresaId: gerenteEmpresaId,
+              ...(query
+                ? {
+                    OR: [
+                      { nombre: { contains: query, mode: "insensitive" } },
+                      { email: { contains: query, mode: "insensitive" } },
+                    ],
+                  }
+                : {}),
+            }
           : { rol: "EMPLEADO", id: "__none__" },
     orderBy: { createdAt: "desc" },
     select: {
@@ -107,14 +138,25 @@ export default async function EmpleadosPage() {
           </div>
         )}
 
-        <div className="mt-10 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+        <form
+          method="get"
+          className="mt-10 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500"
+        >
           <Search size={18} className="text-slate-400" />
           <input
             type="text"
+            name="q"
+            defaultValue={query}
             className="w-full bg-transparent outline-none"
-            placeholder="Buscar usuario"
+            placeholder="Buscar usuario por nombre o email"
           />
-        </div>
+          <button
+            type="submit"
+            className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+          >
+            Buscar
+          </button>
+        </form>
         <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-6">
           <div className="flex items-center justify-between text-sm text-slate-500">
             <span>Usuarios registrados</span>
@@ -125,7 +167,7 @@ export default async function EmpleadosPage() {
               No hay usuarios registrados en esta empresa.
             </p>
           ) : (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>

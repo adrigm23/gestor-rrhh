@@ -48,7 +48,7 @@ export default async function ModificacionFichajesPage() {
       id: true,
       entrada: true,
       salida: true,
-      usuario: { select: { nombre: true, email: true } },
+      usuario: { select: { id: true, nombre: true, email: true } },
     },
     orderBy: { entrada: "desc" },
     take: 50,
@@ -85,6 +85,7 @@ export default async function ModificacionFichajesPage() {
           empleados={empleados}
           fichajes={fichajes.map((fichaje) => ({
             id: fichaje.id,
+            empleadoId: fichaje.usuario.id,
             empleadoNombre: fichaje.usuario.nombre,
             empleadoEmail: fichaje.usuario.email,
             entrada: fichaje.entrada.toISOString(),
@@ -103,7 +104,7 @@ export default async function ModificacionFichajesPage() {
               No hay solicitudes registradas.
             </div>
           ) : (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>

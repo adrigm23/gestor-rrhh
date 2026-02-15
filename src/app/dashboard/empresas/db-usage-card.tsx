@@ -50,7 +50,7 @@ export default async function DbUsageCard() {
             Uso de base de datos
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Plan {stats.planLabel}. Limite configurado {formatMb(stats.limitMb)}.
+            Plan global {stats.planLabel}. Limite configurado {formatMb(stats.limitMb)}.
           </p>
         </div>
         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${level.tone}`}>
@@ -72,7 +72,7 @@ export default async function DbUsageCard() {
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-          <span>Umbrales: 70% aviso · 80% alerta alta · 90% critico</span>
+          <span>Umbrales: 70% aviso - 80% alerta alta - 90% critico</span>
           <span>{emailStatus}</span>
         </div>
       </div>

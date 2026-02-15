@@ -22,7 +22,6 @@ export default async function EmpresasPage() {
       id: true,
       nombre: true,
       cif: true,
-      plan: true,
       pausaCuentaComoTrabajo: true,
       createdAt: true,
       _count: { select: { usuarios: true, departamentos: true, centrosTrabajo: true } },
@@ -62,13 +61,12 @@ export default async function EmpresasPage() {
               No hay empresas registradas.
             </p>
           ) : (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">Nombre</th>
                     <th className="px-4 py-3 text-left font-semibold">CIF</th>
-                    <th className="px-4 py-3 text-left font-semibold">Plan</th>
                     <th className="px-4 py-3 text-left font-semibold">
                       Pausa
                     </th>
@@ -89,7 +87,6 @@ export default async function EmpresasPage() {
                         {empresa.nombre}
                       </td>
                       <td className="px-4 py-3 uppercase">{empresa.cif}</td>
-                      <td className="px-4 py-3">{empresa.plan}</td>
                       <td className="px-4 py-3">
                         <EmpresaConfigForm
                           empresaId={empresa.id}

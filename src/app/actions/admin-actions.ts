@@ -402,6 +402,10 @@ export async function crearContrato(
       });
 
       if (contratoActivo) {
+        if (fechaInicio.getTime() <= contratoActivo.fechaInicio.getTime()) {
+          throw new Error("La fecha de inicio debe ser posterior al contrato activo.");
+        }
+
         const fechaFin = new Date(fechaInicio.getTime() - 1);
         await tx.contrato.update({
           where: { id: contratoActivo.id },
@@ -418,6 +422,12 @@ export async function crearContrato(
       });
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "La fecha de inicio debe ser posterior al contrato activo."
+    ) {
+      return { ...emptyContratoError, message: error.message };
+    }
     console.error("Error creando contrato:", error);
     return { ...emptyContratoError, message: "No se pudo crear el contrato." };
   }

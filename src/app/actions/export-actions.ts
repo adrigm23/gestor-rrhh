@@ -19,6 +19,8 @@ export type ExportacionStatus = {
 
 const emptySuccess: ExportacionState = { status: "success" };
 const emptyError: ExportacionState = { status: "error" };
+const MAX_EXPORT_ROWS = 25000;
+const runningExportJobs = new Set<string>();
 
 const parseDate = (value: string | null, endOfDay: boolean) => {
   if (!value) return null;
@@ -249,10 +251,7 @@ const runExportJob = async (jobId: string) => {
     }
 
     if (job.tipo === "FICHAJES") {
-      const { whereClause, desde, hasta } = buildWhereClause(
-        filtros,
-        empresaFiltro,
-      );
+      const { whereClause } = buildWhereClause(filtros, empresaFiltro);
 
       const fichajes = await prisma.fichaje.findMany({
         where: whereClause,
@@ -266,7 +265,14 @@ const runExportJob = async (jobId: string) => {
           },
         },
         orderBy: { entrada: "desc" },
+        take: MAX_EXPORT_ROWS + 1,
       });
+
+      if (fichajes.length > MAX_EXPORT_ROWS) {
+        throw new Error(
+          `Demasiados registros para exportar (maximo ${MAX_EXPORT_ROWS}). Acota los filtros.`,
+        );
+      }
 
       const header = [
         "Empleado",
@@ -325,7 +331,14 @@ const runExportJob = async (jobId: string) => {
         },
       },
       orderBy: { entrada: "desc" },
+      take: MAX_EXPORT_ROWS + 1,
     });
+
+    if (fichajes.length > MAX_EXPORT_ROWS) {
+      throw new Error(
+        `Demasiados registros para exportar (maximo ${MAX_EXPORT_ROWS}). Acota los filtros.`,
+      );
+    }
 
     const header = [
       "Empresa",
@@ -357,6 +370,16 @@ const runExportJob = async (jobId: string) => {
         error: error instanceof Error ? error.message : "Error desconocido",
       },
     });
+  }
+};
+
+const ensureExportJobProgress = async (jobId: string) => {
+  if (runningExportJobs.has(jobId)) return;
+  runningExportJobs.add(jobId);
+  try {
+    await runExportJob(jobId);
+  } finally {
+    runningExportJobs.delete(jobId);
   }
 };
 
@@ -399,6 +422,32 @@ export async function crearExportacion(
     return { ...emptyError, message: "Selecciona una empresa." };
   }
 
+  if (empresaId) {
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { id: true },
+    });
+    if (!empresa) {
+      return { ...emptyError, message: "Empresa invalida." };
+    }
+  }
+
+  if (empleadoId) {
+    const empleado = await prisma.usuario.findUnique({
+      where: { id: empleadoId },
+      select: { id: true, empresaId: true },
+    });
+    if (!empleado) {
+      return { ...emptyError, message: "Empleado invalido." };
+    }
+    if (empresaId && empleado.empresaId !== empresaId) {
+      return {
+        ...emptyError,
+        message: "El empleado no pertenece a la empresa seleccionada.",
+      };
+    }
+  }
+
   const job = await prisma.exportacion.create({
     data: {
       tipo,
@@ -411,7 +460,7 @@ export async function crearExportacion(
     select: { id: true },
   });
 
-  void runExportJob(job.id);
+  void ensureExportJobProgress(job.id);
 
   return { ...emptySuccess, jobId: job.id };
 }
@@ -440,6 +489,25 @@ export async function obtenerExportacion(jobId: string): Promise<ExportacionStat
 
   if (job.solicitadoPorId !== session.user.id) {
     return { status: "ERROR", error: "No autorizado" };
+  }
+
+  if (job.estado === "PENDIENTE" || job.estado === "GENERANDO") {
+    await ensureExportJobProgress(jobId);
+    const refreshed = await prisma.exportacion.findUnique({
+      where: { id: jobId },
+      select: { estado: true, archivoRuta: true, error: true },
+    });
+
+    if (!refreshed) {
+      return { status: "ERROR", error: "Exportacion no encontrada" };
+    }
+
+    if (refreshed.estado === "LISTO" && refreshed.archivoRuta) {
+      const url = await createSignedUrl(refreshed.archivoRuta, 900);
+      return { status: "LISTO", url };
+    }
+
+    return { status: refreshed.estado, error: refreshed.error ?? null };
   }
 
   if (job.estado === "LISTO" && job.archivoRuta) {

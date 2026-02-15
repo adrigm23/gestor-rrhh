@@ -15,21 +15,22 @@ const emptyError: OrganizacionState = { status: "error" };
 const normalizeNombre = (value?: string | null) =>
   value?.toString().trim().replace(/\s+/g, " ") ?? "";
 
-const getEmpresaId = async (userId: string) => {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: userId },
-    select: { empresaId: true },
-  });
-  return usuario?.empresaId ?? null;
-};
-
 export async function crearCentroTrabajo(
   _prevState: OrganizacionState,
   formData: FormData,
 ): Promise<OrganizacionState> {
   const session = await auth();
 
-  if (!session?.user?.id || session.user?.role === "EMPLEADO") {
+  if (!session?.user?.id) {
+    return { ...emptyError, message: "No autorizado." };
+  }
+
+  const actor = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true, empresaId: true },
+  });
+
+  if (!actor || actor.rol === "EMPLEADO") {
     return { ...emptyError, message: "No autorizado." };
   }
 
@@ -42,9 +43,7 @@ export async function crearCentroTrabajo(
   }
 
   const empresaId =
-    session.user.role === "ADMIN_SISTEMA"
-      ? empresaIdFromForm
-      : await getEmpresaId(session.user.id);
+    actor.rol === "ADMIN_SISTEMA" ? empresaIdFromForm : actor.empresaId;
 
   if (!empresaId) {
     return { ...emptyError, message: "Empresa requerida." };
@@ -91,7 +90,16 @@ export async function crearDepartamento(
 ): Promise<OrganizacionState> {
   const session = await auth();
 
-  if (!session?.user?.id || session.user?.role === "EMPLEADO") {
+  if (!session?.user?.id) {
+    return { ...emptyError, message: "No autorizado." };
+  }
+
+  const actor = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true, empresaId: true },
+  });
+
+  if (!actor || actor.rol === "EMPLEADO") {
     return { ...emptyError, message: "No autorizado." };
   }
 
@@ -105,9 +113,7 @@ export async function crearDepartamento(
   }
 
   const empresaId =
-    session.user.role === "ADMIN_SISTEMA"
-      ? empresaIdFromForm
-      : await getEmpresaId(session.user.id);
+    actor.rol === "ADMIN_SISTEMA" ? empresaIdFromForm : actor.empresaId;
 
   if (!empresaId) {
     return { ...emptyError, message: "Empresa requerida." };

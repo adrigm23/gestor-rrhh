@@ -4,8 +4,13 @@ import { createHmac } from "crypto";
 const normalizeNfcUid = (value: string) =>
   value.replace(/[\s-]/g, "").trim();
 
-const getNfcSecret = () =>
-  process.env.NFC_SECRET || process.env.AUTH_SECRET || "insecure-nfc-secret";
+const getNfcSecret = () => {
+  const secret = process.env.NFC_SECRET || process.env.AUTH_SECRET;
+  if (!secret) {
+    throw new Error("NFC_SECRET o AUTH_SECRET no configurado.");
+  }
+  return secret;
+};
 
 export const hashNfcUid = (value: string) => {
   const normalized = normalizeNfcUid(value);

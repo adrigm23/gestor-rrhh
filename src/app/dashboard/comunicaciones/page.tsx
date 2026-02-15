@@ -9,47 +9,11 @@ export default function ComunicacionesPage() {
       </header>
 
       <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        <p className="text-sm text-slate-500">
-          Envia comunicados internos a los empleados de tu empresa.
-        </p>
-
-        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-slate-700">Titulo</label>
-            <input
-              type="text"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              placeholder="Escribe un titulo"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Centros de trabajo</label>
-            <select className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
-              <option>Seleccionar...</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Departamentos</label>
-            <select className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
-              <option>Seleccionar...</option>
-            </select>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-slate-700">Descripcion</label>
-            <textarea
-              rows={4}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              placeholder="Escribe tu mensaje"
-            />
-          </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+          El modulo de comunicaciones aun no esta implementado en backend.
+          <br />
+          De momento no se envian mensajes ni se guardan borradores.
         </div>
-
-        <button
-          type="button"
-          className="mt-6 w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-4 text-sm font-semibold text-white shadow-xl shadow-sky-200/70 transition hover:brightness-110"
-        >
-          Enviar comunicado
-        </button>
       </section>
     </div>
   );

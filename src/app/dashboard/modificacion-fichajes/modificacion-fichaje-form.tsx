@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import {
   crearSolicitudModificacion,
   type ModificacionFichajeState,
@@ -14,6 +14,7 @@ type EmpleadoOption = {
 
 type FichajeOption = {
   id: string;
+  empleadoId: string;
   empleadoNombre: string;
   empleadoEmail: string;
   entrada: string;
@@ -37,10 +38,15 @@ export default function ModificacionFichajeForm({
   empleados,
   fichajes,
 }: ModificacionFichajeFormProps) {
+  const [empleadoId, setEmpleadoId] = useState("");
   const [state, action, pending] = useActionState(
     crearSolicitudModificacion,
     initialState,
   );
+  const fichajesFiltrados = useMemo(() => {
+    if (!empleadoId) return [];
+    return fichajes.filter((fichaje) => fichaje.empleadoId === empleadoId);
+  }, [empleadoId, fichajes]);
 
   return (
     <form action={action} className="space-y-6">
@@ -71,6 +77,8 @@ export default function ModificacionFichajeForm({
           <select
             name="empleadoId"
             required
+            value={empleadoId}
+            onChange={(event) => setEmpleadoId(event.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
           >
             <option value="">Selecciona un empleado</option>
@@ -88,10 +96,11 @@ export default function ModificacionFichajeForm({
           </label>
           <select
             name="fichajeId"
+            disabled={!empleadoId}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
           >
             <option value="">Crear fichaje nuevo</option>
-            {fichajes.map((fichaje) => (
+            {fichajesFiltrados.map((fichaje) => (
               <option key={fichaje.id} value={fichaje.id}>
                 {formatFichaje(fichaje)}
               </option>

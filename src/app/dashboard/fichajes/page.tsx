@@ -340,7 +340,7 @@ export default async function FichajesPage({
               <span>Fichajes encontrados</span>
               <span>{total}</span>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-slate-100">
+            <div className="overflow-x-auto rounded-2xl border border-slate-100">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>

@@ -22,9 +22,32 @@ type AttemptEntry = {
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_BLOCK_MS = 5 * 60 * 1000;
+const LOGIN_TRACK_MAX = 5000;
 const loginAttempts = new Map<string, AttemptEntry>();
 
+const cleanupLoginAttempts = () => {
+  const now = Date.now();
+  for (const [key, entry] of loginAttempts.entries()) {
+    const expiredWindow = now - entry.lastAttempt > LOGIN_WINDOW_MS;
+    const expiredBlock = !entry.blockedUntil || entry.blockedUntil <= now;
+    if (expiredWindow && expiredBlock) {
+      loginAttempts.delete(key);
+    }
+  }
+
+  if (loginAttempts.size <= LOGIN_TRACK_MAX) return;
+
+  const ordered = [...loginAttempts.entries()].sort(
+    (a, b) => a[1].lastAttempt - b[1].lastAttempt,
+  );
+  const toDrop = ordered.slice(0, loginAttempts.size - LOGIN_TRACK_MAX);
+  for (const [key] of toDrop) {
+    loginAttempts.delete(key);
+  }
+};
+
 const isLoginBlocked = (key: string) => {
+  cleanupLoginAttempts();
   const entry = loginAttempts.get(key);
   if (!entry?.blockedUntil) return false;
   if (entry.blockedUntil <= Date.now()) {
@@ -35,6 +58,7 @@ const isLoginBlocked = (key: string) => {
 };
 
 const recordLoginAttempt = (key: string, success: boolean) => {
+  cleanupLoginAttempts();
   if (success) {
     loginAttempts.delete(key);
     return;

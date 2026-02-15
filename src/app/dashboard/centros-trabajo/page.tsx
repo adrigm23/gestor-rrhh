@@ -89,7 +89,7 @@ export default async function CentrosTrabajoPage() {
               No hay centros registrados.
             </p>
           ) : (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>

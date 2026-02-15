@@ -131,13 +131,34 @@ export default async function EscritorioPage({
         })
       : [];
 
-  const empleadoId =
+  const empleadoInicialId =
     role === "GERENTE" ? empleadoParam ?? empleados[0]?.id ?? "" : userId;
 
-  const empleado = await prisma.usuario.findUnique({
-    where: { id: empleadoId },
-    select: { id: true, nombre: true, email: true },
-  });
+  let empleado =
+    role === "GERENTE"
+      ? await prisma.usuario.findFirst({
+          where: {
+            id: empleadoInicialId,
+            empresaId,
+            rol: "EMPLEADO",
+          },
+          select: { id: true, nombre: true, email: true },
+        })
+      : await prisma.usuario.findUnique({
+          where: { id: empleadoInicialId },
+          select: { id: true, nombre: true, email: true },
+        });
+
+  if (!empleado && role === "GERENTE" && empleados[0]?.id) {
+    empleado = await prisma.usuario.findFirst({
+      where: {
+        id: empleados[0].id,
+        empresaId,
+        rol: "EMPLEADO",
+      },
+      select: { id: true, nombre: true, email: true },
+    });
+  }
 
   if (!empleado) {
     return (
@@ -146,6 +167,8 @@ export default async function EscritorioPage({
       </div>
     );
   }
+
+  const empleadoId = empleado.id;
 
   const contrato = await prisma.contrato.findFirst({
     where: {
@@ -347,7 +370,7 @@ export default async function EscritorioPage({
             No hay fichajes en el periodo seleccionado.
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-100">
+          <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-100">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                 <tr>
