@@ -13,7 +13,7 @@ type EmpresaOption = {
 
 type EmpresaAssignFormProps = {
   usuarioId: string;
-  empresaIdActual: string;
+  empresaIdActual: string | null;
   empresas: EmpresaOption[];
 };
 
@@ -28,13 +28,25 @@ export default function EmpresaAssignForm({
     cambiarEmpresaUsuario,
     initialState,
   );
-  const [empresaId, setEmpresaId] = useState(empresaIdActual);
+  const [empresaId, setEmpresaId] = useState(
+    empresaIdActual ?? empresas[0]?.id ?? "",
+  );
 
   useEffect(() => {
     if (state.status === "success") {
       setEmpresaId((prev) => prev);
     }
   }, [state.status]);
+
+  useEffect(() => {
+    if (empresaIdActual) {
+      setEmpresaId(empresaIdActual);
+    } else if (empresas[0]?.id) {
+      setEmpresaId(empresas[0].id);
+    } else {
+      setEmpresaId("");
+    }
+  }, [empresaIdActual, empresas]);
 
   const statusClass =
     state.status === "error"
@@ -52,6 +64,9 @@ export default function EmpresaAssignForm({
         onChange={(event) => setEmpresaId(event.target.value)}
         className="w-full rounded-xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-2 py-2 text-xs text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
       >
+        {empresaId === "" && (
+          <option value="">Sin empresa</option>
+        )}
         {empresas.map((empresa) => (
           <option key={empresa.id} value={empresa.id}>
             {empresa.nombre}
