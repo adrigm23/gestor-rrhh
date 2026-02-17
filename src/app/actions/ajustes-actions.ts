@@ -95,7 +95,7 @@ export async function actualizarPassword(
   const hashedPassword = await hashPassword(newPassword);
   await prisma.usuario.update({
     where: { id: session.user.id },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, passwordMustChange: false },
   });
 
   revalidatePath("/dashboard/ajustes");

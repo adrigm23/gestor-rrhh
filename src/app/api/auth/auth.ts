@@ -86,12 +86,14 @@ declare module "next-auth" {
       id?: string;
       role?: string;
       empresaId?: string | null;
+      passwordMustChange?: boolean;
     } & DefaultSession["user"];
   }
   interface User {
     id?: string;
     role?: string;
     empresaId?: string | null;
+    passwordMustChange?: boolean;
   }
 }
 
@@ -100,6 +102,7 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     empresaId?: string | null;
+    passwordMustChange?: boolean;
   }
 }
 
@@ -152,6 +155,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.rol, // Mapeo de rol de DB a role de NextAuth
           empresaId: user.empresaId ?? null,
+          passwordMustChange: user.passwordMustChange ?? false,
         };
       },
     }),
@@ -191,6 +195,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.rol,
           empresaId: user.empresaId ?? null,
+          passwordMustChange: user.passwordMustChange ?? false,
         };
       },
     }),
@@ -201,6 +206,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = user.role;
         token.empresaId = user.empresaId ?? null;
+        token.passwordMustChange = user.passwordMustChange ?? false;
       }
       return token;
     },
@@ -212,6 +218,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         session.user.role = token.role;
         session.user.empresaId = token.empresaId ?? null;
+        if (userId) {
+          const dbUser = await prisma.usuario.findUnique({
+            where: { id: userId },
+            select: { passwordMustChange: true },
+          });
+          session.user.passwordMustChange = dbUser?.passwordMustChange ?? false;
+        } else {
+          session.user.passwordMustChange = token.passwordMustChange ?? false;
+        }
       }
       return session;
     },

@@ -42,6 +42,7 @@ export default function CreateUserForm({
       setRol("EMPLEADO");
       setEmpresaId("");
       setHorasSemanales("40");
+      setShowPassword(false);
     }
   }, [state.status]);
 
@@ -124,6 +125,7 @@ export default function CreateUserForm({
               required
               className={`${inputClass} pr-10`}
               placeholder="********"
+              autoComplete="new-password"
             />
             <button
               type="button"

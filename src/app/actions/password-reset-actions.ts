@@ -142,7 +142,7 @@ export async function resetPassword(
 
   await prisma.usuario.update({
     where: { id: resetToken.usuario.id },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, passwordMustChange: false },
   });
 
   await prisma.passwordResetToken.update({

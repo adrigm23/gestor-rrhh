@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   actualizarPassword,
   actualizarPerfil,
@@ -11,11 +12,16 @@ import {
 type AjustesFormsProps = {
   nombre: string;
   email: string;
+  forcePasswordChange?: boolean;
 };
 
 const initialState: AjustesState = { status: "idle" };
 
-export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
+export default function AjustesForms({
+  nombre,
+  email,
+  forcePasswordChange = false,
+}: AjustesFormsProps) {
   const [perfilState, perfilAction, perfilPending] = useActionState(
     actualizarPerfil,
     initialState,
@@ -30,6 +36,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
   );
   const [nfcUid, setNfcUid] = useState("");
   const nfcInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (nfcState.status === "success") {
@@ -37,8 +44,19 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
     }
   }, [nfcState.status]);
 
+  useEffect(() => {
+    if (passwordState.status === "success") {
+      router.refresh();
+    }
+  }, [passwordState.status, router]);
+
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      {forcePasswordChange && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800 lg:col-span-2">
+          Por seguridad, debes actualizar tu contrasena antes de continuar.
+        </div>
+      )}
       <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
         <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
           Informacion personal

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "./sidebar";
 import HeaderActions from "./header-actions";
 
@@ -9,14 +10,18 @@ type DashboardShellProps = {
   children: ReactNode;
   userName: string;
   role?: string;
+  mustChangePassword?: boolean;
 };
 
 export default function DashboardShell({
   children,
   userName,
   role,
+  mustChangePassword = false,
 }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const updateDeviceClass = () => {
@@ -40,6 +45,12 @@ export default function DashboardShell({
       window.removeEventListener("orientationchange", updateDeviceClass);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mustChangePassword) return;
+    if (pathname.startsWith("/dashboard/ajustes")) return;
+    router.replace("/dashboard/ajustes?force=1");
+  }, [mustChangePassword, pathname, router]);
 
   return (
     <div className="min-h-screen bg-[color:var(--app-bg)] text-[color:var(--text-primary)]">

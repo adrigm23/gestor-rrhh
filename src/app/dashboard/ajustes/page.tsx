@@ -79,7 +79,11 @@ export default async function AjustesPage() {
         </div>
       </section>
 
-      <AjustesForms nombre={usuario.nombre} email={usuario.email} />
+      <AjustesForms
+        nombre={usuario.nombre}
+        email={usuario.email}
+        forcePasswordChange={usuario.passwordMustChange ?? false}
+      />
 
       {usuario.rol === "GERENTE" && usuario.empresa && (
         <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">

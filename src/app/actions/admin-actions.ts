@@ -158,6 +158,7 @@ export async function crearUsuario(
           nombre,
           email,
           password: hashedPassword,
+          passwordMustChange: true,
           rol,
           empresaId: empresaIdForm,
           departamentoId: departamentoFinal,
@@ -494,7 +495,7 @@ export async function resetUsuarioPassword(
 
   await prisma.usuario.update({
     where: { id: usuarioId },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, passwordMustChange: true },
   });
 
   revalidatePath("/dashboard/empleados");

@@ -26,6 +26,7 @@ model Usuario {
   nombre     String
   email      String    @unique
   password   String
+  passwordMustChange Boolean @default(false)
   nfcUidHash String?   @unique
   rol        Rol       @default(EMPLEADO)
   empresaId  String

@@ -14,9 +14,14 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   }
   const userName = session?.user?.name ?? "Usuario";
   const role = session?.user?.role;
+  const mustChangePassword = session?.user?.passwordMustChange ?? false;
 
   return (
-    <DashboardShell userName={userName} role={role}>
+    <DashboardShell
+      userName={userName}
+      role={role}
+      mustChangePassword={mustChangePassword}
+    >
       {children}
     </DashboardShell>
   );
