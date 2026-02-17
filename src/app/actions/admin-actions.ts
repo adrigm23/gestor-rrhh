@@ -37,6 +37,16 @@ export type EliminarUsuarioState = {
   message?: string;
 };
 
+export type EstadoUsuarioState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
+export type UpdateEmailState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
@@ -49,6 +59,10 @@ const emptyResetSuccess: ResetPasswordState = { status: "success" };
 const emptyResetError: ResetPasswordState = { status: "error" };
 const emptyDeleteSuccess: EliminarUsuarioState = { status: "success" };
 const emptyDeleteError: EliminarUsuarioState = { status: "error" };
+const emptyEstadoSuccess: EstadoUsuarioState = { status: "success" };
+const emptyEstadoError: EstadoUsuarioState = { status: "error" };
+const emptyUpdateSuccess: UpdateEmailState = { status: "success" };
+const emptyUpdateError: UpdateEmailState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -613,4 +627,135 @@ export async function eliminarUsuario(
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyDeleteSuccess, message: "Usuario eliminado." };
+}
+
+export async function actualizarEstadoUsuario(
+  _prevState: EstadoUsuarioState,
+  formData: FormData,
+): Promise<EstadoUsuarioState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyEstadoError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyEstadoError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const accion = formData.get("accion")?.toString().trim() ?? "";
+
+  if (!usuarioId) {
+    return { ...emptyEstadoError, message: "Usuario invalido." };
+  }
+
+  if (usuarioId === session.user.id) {
+    return { ...emptyEstadoError, message: "No puedes dar de baja tu cuenta." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true, activo: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyEstadoError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyEstadoError, message: "No se permite en este usuario." };
+  }
+
+  if (accion === "baja") {
+    if (!usuario.activo) {
+      return { ...emptyEstadoError, message: "El usuario ya esta dado de baja." };
+    }
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { activo: false, fechaBaja: new Date() },
+    });
+    revalidatePath("/dashboard/empleados");
+    return { ...emptyEstadoSuccess, message: "Usuario dado de baja." };
+  }
+
+  if (accion === "reactivar") {
+    if (usuario.activo) {
+      return { ...emptyEstadoError, message: "El usuario ya esta activo." };
+    }
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { activo: true, fechaBaja: null },
+    });
+    revalidatePath("/dashboard/empleados");
+    return { ...emptyEstadoSuccess, message: "Usuario reactivado." };
+  }
+
+  return { ...emptyEstadoError, message: "Accion invalida." };
+}
+
+export async function actualizarEmailUsuario(
+  _prevState: UpdateEmailState,
+  formData: FormData,
+): Promise<UpdateEmailState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyUpdateError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyUpdateError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const email = normalizeEmail(formData.get("email")?.toString() ?? "");
+
+  if (!usuarioId || !email) {
+    return { ...emptyUpdateError, message: "Completa todos los campos." };
+  }
+
+  if (!emailRegex.test(email)) {
+    return { ...emptyUpdateError, message: "Email invalido." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyUpdateError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyUpdateError, message: "No se permite en este usuario." };
+  }
+
+  const existente = await prisma.usuario.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existente && existente.id !== usuarioId) {
+    return { ...emptyUpdateError, message: "Ese email ya esta en uso." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: { email },
+  });
+
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyUpdateSuccess, message: "Email actualizado." };
 }

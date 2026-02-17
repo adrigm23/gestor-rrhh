@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import CreateUserForm from "./create-user-form";
 
 type EmpresaOption = {
@@ -52,9 +52,10 @@ export default function CreateUserPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200/60 transition hover:bg-sky-600"
+        className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-200/60 transition hover:bg-emerald-700"
       >
-        Nuevo usuario
+        <Plus size={16} />
+        Crear usuario
       </button>
 
       {open && (

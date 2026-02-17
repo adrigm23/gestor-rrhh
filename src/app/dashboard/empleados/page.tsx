@@ -1,13 +1,7 @@
-import { Search } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
-import CreateUserForm from "./create-user-form";
 import { prisma } from "../../lib/prisma";
-import NfcAssignForm from "./nfc-assign-form";
-import EmpresaAssignForm from "./empresa-assign-form";
-import ContratoForm from "./contrato-form";
-import PasswordResetForm from "./password-reset-form";
-import UserDeleteForm from "./user-delete-form";
+import EmpleadosDirectory from "./empleados-directory";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -33,6 +27,26 @@ export default async function EmpleadosPage({
   const currentUserId = session.user?.id ?? "";
   const resolvedSearchParams = (await searchParams) ?? {};
   const query = (getParam(resolvedSearchParams.q) ?? "").trim();
+  const empresaParam =
+    role === "ADMIN_SISTEMA"
+      ? (getParam(resolvedSearchParams.empresaId) ?? "")
+      : "";
+  const rolParamRaw = getParam(resolvedSearchParams.rol) ?? "todos";
+  const rolParam =
+    rolParamRaw === "EMPLEADO" || rolParamRaw === "GERENTE"
+      ? rolParamRaw
+      : "todos";
+  const estadoParamRaw = getParam(resolvedSearchParams.estado) ?? "activos";
+  const estadoParam =
+    estadoParamRaw === "baja" || estadoParamRaw === "todos"
+      ? estadoParamRaw
+      : "activos";
+  const estadoWhere =
+    estadoParam === "baja"
+      ? { activo: false }
+      : estadoParam === "todos"
+        ? {}
+        : { activo: true };
   const gerenteEmpresaId =
     role === "GERENTE"
       ? (
@@ -47,7 +61,12 @@ export default async function EmpleadosPage({
     where:
       role === "ADMIN_SISTEMA"
         ? {
-            rol: { in: ["EMPLEADO", "GERENTE"] },
+            rol:
+              rolParam === "todos"
+                ? { in: ["EMPLEADO", "GERENTE"] }
+                : rolParam,
+            ...(empresaParam ? { empresaId: empresaParam } : {}),
+            ...estadoWhere,
             ...(query
               ? {
                   OR: [
@@ -61,6 +80,7 @@ export default async function EmpleadosPage({
           ? {
               rol: "EMPLEADO",
               empresaId: gerenteEmpresaId,
+              ...estadoWhere,
               ...(query
                 ? {
                     OR: [
@@ -72,22 +92,25 @@ export default async function EmpleadosPage({
             }
           : { rol: "EMPLEADO", id: "__none__" },
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      nombre: true,
-      email: true,
-      rol: true,
-      createdAt: true,
-      nfcUidHash: true,
-      empresaId: true,
-      empresa: { select: { nombre: true } },
-      departamento: { select: { nombre: true } },
-      contratos: {
-        orderBy: { fechaInicio: "desc" },
-        take: 1,
-        select: { horasSemanales: true, fechaInicio: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        activo: true,
+        fechaBaja: true,
+        createdAt: true,
+        nfcUidHash: true,
+        passwordMustChange: true,
+        empresaId: true,
+        empresa: { select: { nombre: true } },
+        departamento: { select: { nombre: true } },
+        contratos: {
+          orderBy: { fechaInicio: "desc" },
+          take: 1,
+          select: { horasSemanales: true, fechaInicio: true },
+        },
       },
-    },
   });
 
   const departamentos = await prisma.departamento.findMany({
@@ -115,166 +138,17 @@ export default async function EmpleadosPage({
       : [];
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
-            Administracion
-          </p>
-          <h2 className="text-3xl font-semibold text-slate-900">Gestion de usuarios</h2>
-        </div>
-        {role === "ADMIN_SISTEMA" && (
-          <a
-            href="#crear-usuario"
-            className="rounded-full bg-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-200/60"
-          >
-            Crear usuario
-          </a>
-        )}
-      </header>
-
-      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        {role === "ADMIN_SISTEMA" ? (
-          <CreateUserForm empresas={empresas} departamentos={departamentos} />
-        ) : (
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-4 text-sm text-slate-600">
-            La creacion de usuarios esta reservada al administrador del sistema.
-          </div>
-        )}
-
-        <form
-          method="get"
-          className="mt-10 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500"
-        >
-          <Search size={18} className="text-slate-400" />
-          <input
-            type="text"
-            name="q"
-            defaultValue={query}
-            className="w-full bg-transparent outline-none"
-            placeholder="Buscar usuario por nombre o email"
-          />
-          <button
-            type="submit"
-            className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
-          >
-            Buscar
-          </button>
-        </form>
-        <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-6">
-          <div className="flex items-center justify-between text-sm text-slate-500">
-            <span>Usuarios registrados</span>
-            <span>{usuarios.length}</span>
-          </div>
-          {usuarios.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">
-              No hay usuarios registrados en esta empresa.
-            </p>
-          ) : (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Nombre</th>
-                    <th className="px-4 py-3 text-left font-semibold">Email</th>
-                    <th className="px-4 py-3 text-left font-semibold">Rol</th>
-                    <th className="px-4 py-3 text-left font-semibold">Empresa</th>
-                    <th className="px-4 py-3 text-left font-semibold">
-                      Departamento
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold">
-                      Contrato
-                    </th>
-                    {role === "ADMIN_SISTEMA" && (
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Acceso
-                      </th>
-                    )}
-                    {role === "ADMIN_SISTEMA" && (
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Tarjeta
-                      </th>
-                    )}
-                    {role === "ADMIN_SISTEMA" && (
-                      <th className="px-4 py-3 text-left font-semibold">
-                        Eliminar
-                      </th>
-                    )}
-                    <th className="px-4 py-3 text-left font-semibold">
-                      Alta
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {usuarios.map((usuario) => (
-                    <tr key={usuario.id} className="text-slate-600">
-                      <td className="px-4 py-3 font-semibold text-slate-900">
-                        {usuario.nombre}
-                      </td>
-                      <td className="px-4 py-3">{usuario.email}</td>
-                      <td className="px-4 py-3">
-                        {usuario.rol === "GERENTE" ? "Gerente" : "Empleado"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {role === "ADMIN_SISTEMA" ? (
-                          <EmpresaAssignForm
-                            usuarioId={usuario.id}
-                            empresaIdActual={usuario.empresaId}
-                            empresas={empresas}
-                          />
-                        ) : (
-                          usuario.empresa?.nombre ?? "Sin empresa"
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {usuario.departamento?.nombre ?? "Sin departamento"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ContratoForm
-                          usuarioId={usuario.id}
-                          horasActuales={usuario.contratos[0]?.horasSemanales ?? null}
-                          fechaInicioActual={
-                            usuario.contratos[0]?.fechaInicio
-                              ? usuario.contratos[0].fechaInicio.toISOString().slice(0, 10)
-                              : null
-                          }
-                        />
-                      </td>
-                      {role === "ADMIN_SISTEMA" && (
-                        <td className="px-4 py-3">
-                          <PasswordResetForm usuarioId={usuario.id} />
-                        </td>
-                      )}
-                      {role === "ADMIN_SISTEMA" && (
-                        <td className="px-4 py-3">
-                          <NfcAssignForm
-                            usuarioId={usuario.id}
-                            tieneTarjeta={Boolean(usuario.nfcUidHash)}
-                          />
-                        </td>
-                      )}
-                      {role === "ADMIN_SISTEMA" && (
-                        <td className="px-4 py-3">
-                          <UserDeleteForm
-                            usuarioId={usuario.id}
-                            usuarioNombre={usuario.nombre}
-                            usuarioEmail={usuario.email}
-                            disabled={usuario.id === currentUserId}
-                          />
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
-                        {usuario.createdAt.toLocaleDateString("es-ES")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+    <EmpleadosDirectory
+      role={role}
+      currentUserId={currentUserId}
+      query={query}
+      estadoParam={estadoParam}
+      rolParam={rolParam}
+      empresaParam={empresaParam}
+      usuarios={usuarios}
+      empresas={empresas}
+      departamentos={departamentos}
+    />
   );
 }
 

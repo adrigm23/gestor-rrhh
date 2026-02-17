@@ -8,7 +8,12 @@ type DashboardLayoutProps = {
 };
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    redirect("/login");
+  }
   if (!session?.user?.id) {
     redirect("/login");
   }

@@ -131,7 +131,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email },
         });
 
-        if (!user || !user.password) {
+        if (!user || !user.password || user.activo === false) {
           recordLoginAttempt(email, false);
           await sleep(600);
           return null;
@@ -182,7 +182,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { nfcUidHash: uidHash },
         });
 
-        if (!user) {
+        if (!user || user.activo === false) {
           recordLoginAttempt(key, false);
           await sleep(600);
           return null;
