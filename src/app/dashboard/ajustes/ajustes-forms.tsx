@@ -39,9 +39,11 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        <h3 className="text-lg font-semibold text-slate-900">Informacion personal</h3>
-        <p className="mt-1 text-sm text-slate-500">
+      <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
+        <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
+          Informacion personal
+        </h3>
+        <p className="mt-1 text-sm text-[color:var(--text-muted)]">
           Actualiza tu nombre y correo principal.
         </p>
 
@@ -59,23 +61,27 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
 
         <form action={perfilAction} className="mt-6 space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Nombre</label>
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+              Nombre
+            </label>
             <input
               name="nombre"
               type="text"
               required
               defaultValue={nombre}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Email</label>
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+              Email
+            </label>
             <input
               name="email"
               type="email"
               required
               defaultValue={email}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <button
@@ -88,9 +94,11 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
         </form>
       </section>
 
-      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        <h3 className="text-lg font-semibold text-slate-900">Seguridad</h3>
-        <p className="mt-1 text-sm text-slate-500">
+      <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
+        <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
+          Seguridad
+        </h3>
+        <p className="mt-1 text-sm text-[color:var(--text-muted)]">
           Cambia tu contrasena actual.
         </p>
 
@@ -108,7 +116,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
 
         <form action={passwordAction} className="mt-6 space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
               Contrasena actual
             </label>
             <input
@@ -116,11 +124,11 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
               Nueva contrasena
             </label>
             <input
@@ -128,11 +136,11 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
               Confirmar contrasena
             </label>
             <input
@@ -140,7 +148,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
               type="password"
               required
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
           <button
@@ -153,9 +161,11 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
         </form>
       </section>
 
-      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)] lg:col-span-2">
-        <h3 className="text-lg font-semibold text-slate-900">Tarjeta NFC</h3>
-        <p className="mt-1 text-sm text-slate-500">
+      <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)] lg:col-span-2">
+        <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
+          Tarjeta NFC
+        </h3>
+        <p className="mt-1 text-sm text-[color:var(--text-muted)]">
           Acerca tu tarjeta al lector para asociarla a tu cuenta.
         </p>
 
@@ -173,7 +183,7 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
 
         <form action={nfcAction} className="mt-6 space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
               UID de tarjeta
             </label>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -191,12 +201,12 @@ export default function AjustesForms({ nombre, email }: AjustesFormsProps) {
                 }}
                 inputMode="numeric"
                 placeholder="Pasa la tarjeta por el lector"
-                className="w-full flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                className="w-full flex-1 rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
               />
               <button
                 type="button"
                 onClick={() => nfcInputRef.current?.focus()}
-                className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                className="rounded-full border border-[color:var(--card-border)] px-4 py-3 text-sm font-semibold text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
               >
                 Activar lector
               </button>

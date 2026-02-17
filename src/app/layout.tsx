@@ -30,13 +30,27 @@ export const viewport = {
   viewportFit: "cover",
 };
 
+const themeScript = `
+(() => {
+  try {
+    const stored = localStorage.getItem("mdmm-theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = stored || (prefersDark ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         suppressHydrationWarning
         className={`${brandSans.variable} ${brandMono.variable} antialiased`}

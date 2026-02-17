@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   crearExportacion,
   obtenerExportacion,
@@ -18,8 +18,9 @@ type ExportFilters = {
 
 type ExportAsyncPanelProps = {
   filters: ExportFilters;
-  canQuery: boolean;
+  canExport: boolean;
   showEmpresas: boolean;
+  formId?: string;
 };
 
 type JobState = {
@@ -33,23 +34,63 @@ const pollIntervalMs = 4000;
 
 export default function ExportAsyncPanel({
   filters,
-  canQuery,
+  canExport,
   showEmpresas,
+  formId,
 }: ExportAsyncPanelProps) {
   const [jobFichajes, setJobFichajes] = useState<JobState | null>(null);
   const [jobEmpresas, setJobEmpresas] = useState<JobState | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [liveFilters, setLiveFilters] = useState<ExportFilters | null>(null);
+
+  const resolveFilters = useMemo(() => liveFilters ?? filters, [liveFilters, filters]);
+
+  useEffect(() => {
+    if (!formId) return;
+    const form = document.getElementById(formId) as HTMLFormElement | null;
+    if (!form) return;
+
+    const readFilters = () => {
+      const data = new FormData(form);
+      const value = (key: string) => {
+        const raw = data.get(key);
+        return typeof raw === "string" ? raw : "";
+      };
+      const next: ExportFilters = {
+        from: value("from") || filters.from,
+        to: value("to") || filters.to,
+        estado: value("estado") || filters.estado,
+        tipo: value("tipo") || filters.tipo,
+        empresaId: value("empresaId") || "",
+        empleadoId: value("empleadoId") || "",
+      };
+      setLiveFilters(next);
+    };
+
+    readFilters();
+    form.addEventListener("input", readFilters);
+    form.addEventListener("change", readFilters);
+    return () => {
+      form.removeEventListener("input", readFilters);
+      form.removeEventListener("change", readFilters);
+    };
+  }, [formId, filters]);
+
+  const canExportFichajes = Boolean(resolveFilters.empresaId || canExport);
 
   const startExport = async (tipo: "FICHAJES" | "FICHAJES_EMPRESAS") => {
     setIsCreating(true);
     const formData = new FormData();
+    const active = resolveFilters;
     formData.set("tipo", tipo);
-    formData.set("from", filters.from);
-    formData.set("to", filters.to);
-    formData.set("estado", filters.estado);
-    formData.set("tipoFiltro", filters.tipo);
-    if (filters.empresaId) formData.set("empresaId", filters.empresaId);
-    if (filters.empleadoId) formData.set("empleadoId", filters.empleadoId);
+    formData.set("from", active.from || "");
+    formData.set("to", active.to || "");
+    formData.set("estado", active.estado || "todos");
+    formData.set("tipoFiltro", active.tipo || "todos");
+    if (tipo === "FICHAJES") {
+      if (active.empresaId) formData.set("empresaId", active.empresaId);
+      if (active.empleadoId) formData.set("empleadoId", active.empleadoId);
+    }
 
     const result = await crearExportacion({ status: "idle" }, formData);
     if (result.status === "success" && result.jobId) {
@@ -118,18 +159,18 @@ export default function ExportAsyncPanel({
       <div className="flex flex-col gap-1">
         <button
           type="button"
-          disabled={!canQuery || isCreating}
+          disabled={!canExportFichajes || isCreating}
           onClick={() => startExport("FICHAJES")}
           className={`rounded-full px-5 py-2 text-sm font-semibold shadow-lg transition ${
-            canQuery
-              ? "bg-teal-500 text-white shadow-teal-200/60 hover:bg-teal-600"
-              : "cursor-not-allowed bg-teal-300 text-white/70"
+            canExportFichajes
+              ? "bg-sky-500 text-white shadow-sky-200/60 hover:bg-sky-600"
+              : "cursor-not-allowed bg-slate-200 text-slate-400"
           }`}
         >
           Generar informe
         </button>
         {jobFichajes?.status && (
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-[color:var(--text-muted)]">
             {jobFichajes.status === "LISTO" && jobFichajes.url ? (
               <a
                 href={jobFichajes.url}
@@ -144,6 +185,11 @@ export default function ExportAsyncPanel({
             )}
           </div>
         )}
+        {!canExportFichajes && (
+          <div className="text-xs text-[color:var(--text-muted)]">
+            Selecciona una empresa para exportar.
+          </div>
+        )}
       </div>
 
       {showEmpresas && (
@@ -152,12 +198,12 @@ export default function ExportAsyncPanel({
             type="button"
             disabled={isCreating}
             onClick={() => startExport("FICHAJES_EMPRESAS")}
-            className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+            className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-5 py-2 text-sm font-semibold text-[color:var(--text-secondary)] shadow-sm transition hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Generar por empresas
           </button>
           {jobEmpresas?.status && (
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-[color:var(--text-muted)]">
               {jobEmpresas.status === "LISTO" && jobEmpresas.url ? (
                 <a
                   href={jobEmpresas.url}

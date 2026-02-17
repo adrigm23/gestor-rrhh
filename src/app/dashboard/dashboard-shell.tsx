@@ -42,17 +42,18 @@ export default function DashboardShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f0faf9,_#f4f6fb_45%,_#ecf1f9_100%)] text-slate-900">
+    <div className="min-h-screen bg-[color:var(--app-bg)] text-[color:var(--text-primary)]">
       <div className="flex min-h-screen flex-col md:flex-row">
         <Sidebar
           role={role}
+          userName={userName}
           mobileOpen={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
           onOpen={() => setMobileMenuOpen(true)}
         />
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
+          <header className="sticky top-0 z-20 border-b border-[color:var(--header-border)] bg-[color:var(--header-bg)] backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
             <HeaderActions
               userName={userName}
               onMenuClick={() => setMobileMenuOpen(true)}
@@ -63,9 +64,9 @@ export default function DashboardShell({
             {children}
           </main>
 
-          <footer className="pb-24 text-center text-xs text-slate-400 md:pb-8">
+          <footer className="pb-24 text-center text-xs text-[color:var(--text-muted)] md:pb-8">
             <p>(c) 2026 - mdmm - suma3 consultores - Politica de Privacidad - Aviso Legal</p>
-            <p className="mt-1 text-slate-300">v1.7.7</p>
+            <p className="mt-1 text-[color:var(--text-muted)]/70">v1.7.7</p>
           </footer>
         </div>
       </div>

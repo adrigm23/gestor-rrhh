@@ -45,18 +45,18 @@ export default function CentroTrabajoForm({
 
   const statusClass =
     state.status === "error"
-      ? "border-red-200 bg-red-50 text-red-600"
+      ? "border-rose-200/60 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200"
       : state.status === "success"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : "border-slate-200 bg-white text-slate-500";
+        ? "border-emerald-200/60 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
+        : "border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]";
 
   return (
     <form id="crear-centro" ref={formRef} action={formAction} className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
           Crear centro de trabajo
         </h3>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[color:var(--text-muted)]">
           Organiza los departamentos dentro de un centro.
         </p>
       </div>
@@ -71,21 +71,25 @@ export default function CentroTrabajoForm({
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700">Nombre</label>
+          <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+            Nombre
+          </label>
           <input
             name="nombre"
             type="text"
             required
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             placeholder="Ej: Planta Norte"
           />
         </div>
         {role === "ADMIN_SISTEMA" && (
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Empresa</label>
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+              Empresa
+            </label>
             <select
               name="empresaId"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
             >
               <option value="">Selecciona empresa</option>
               {empresas.map((empresa) => (
@@ -97,10 +101,12 @@ export default function CentroTrabajoForm({
           </div>
         )}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700">Gerente</label>
+          <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+            Gerente
+          </label>
           <select
             name="gerenteId"
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
           >
             <option value="">Sin gerente</option>
             {gerentes.map((gerente) => (

@@ -4,6 +4,7 @@ import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import SolicitudesPanel, {
   type SolicitudPendiente,
+  type SolicitudHistorial,
 } from "./solicitudes-panel";
 
 export default async function VacacionesAusenciasPage() {
@@ -29,7 +30,7 @@ export default async function VacacionesAusenciasPage() {
         )?.empresaId ?? null
       : null;
 
-  const whereClause: Prisma.SolicitudWhereInput =
+  const wherePendientes: Prisma.SolicitudWhereInput =
     role === "ADMIN_SISTEMA"
       ? { estado: EstadoSolicitud.PENDIENTE }
       : gerenteEmpresaId
@@ -50,18 +51,43 @@ export default async function VacacionesAusenciasPage() {
     };
   }>;
 
-  const solicitudes: SolicitudConUsuario[] = await prisma.solicitud.findMany({
-    where: whereClause,
-    include: {
-      usuario: {
-        select: { nombre: true, email: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-  });
+  const whereHistorico: Prisma.SolicitudWhereInput =
+    role === "ADMIN_SISTEMA"
+      ? { estado: { in: [EstadoSolicitud.APROBADA, EstadoSolicitud.RECHAZADA] } }
+      : gerenteEmpresaId
+        ? {
+            estado: { in: [EstadoSolicitud.APROBADA, EstadoSolicitud.RECHAZADA] },
+            usuario: { empresaId: gerenteEmpresaId },
+          }
+        : { estado: EstadoSolicitud.APROBADA, usuarioId: "__none__" };
 
-  const pendientes: SolicitudPendiente[] = solicitudes.map((item) => ({
+  const [solicitudesPendientes, solicitudesHistorico]: [
+    SolicitudConUsuario[],
+    SolicitudConUsuario[],
+  ] = await Promise.all([
+    prisma.solicitud.findMany({
+      where: wherePendientes,
+      include: {
+        usuario: {
+          select: { nombre: true, email: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
+    prisma.solicitud.findMany({
+      where: whereHistorico,
+      include: {
+        usuario: {
+          select: { nombre: true, email: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  const pendientes: SolicitudPendiente[] = solicitudesPendientes.map((item) => ({
     id: item.id,
     tipo: item.tipo,
     inicio: item.inicio.toISOString(),
@@ -74,6 +100,18 @@ export default async function VacacionesAusenciasPage() {
     usuarioEmail: item.usuario.email,
   }));
 
-  return <SolicitudesPanel solicitudes={pendientes} />;
+  const historico: SolicitudHistorial[] = solicitudesHistorico.map((item) => ({
+    id: item.id,
+    tipo: item.tipo,
+    inicio: item.inicio.toISOString(),
+    fin: item.fin ? item.fin.toISOString() : null,
+    motivo: item.motivo ?? null,
+    ausenciaTipo: item.ausenciaTipo ?? null,
+    estado: item.estado,
+    usuarioNombre: item.usuario.nombre,
+    usuarioEmail: item.usuario.email,
+  }));
+
+  return <SolicitudesPanel solicitudes={pendientes} historico={historico} />;
 }
 

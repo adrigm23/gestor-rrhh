@@ -36,39 +36,43 @@ export default async function AjustesPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">
           Sistema
         </p>
-        <h2 className="text-3xl font-semibold text-slate-900">Ajustes</h2>
+        <h2 className="text-3xl font-semibold text-[color:var(--text-primary)]">
+          Perfil y configuracion
+        </h2>
       </header>
 
-      <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <div className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface-muted)] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Usuario
             </p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">
+            <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">
               {usuario.nombre}
             </p>
-            <p className="text-sm text-slate-500">{usuario.email}</p>
+            <p className="text-sm text-[color:var(--text-muted)]">{usuario.email}</p>
           </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <div className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface-muted)] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Rol
             </p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{roleLabel}</p>
-            <p className="text-sm text-slate-500">
+            <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">
+              {roleLabel}
+            </p>
+            <p className="text-sm text-[color:var(--text-muted)]">
               {usuario.rol === "ADMIN_SISTEMA"
                 ? "Control total del sistema"
                 : "Acceso segun permisos asignados"}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <div className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface-muted)] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Empresa
             </p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">
+            <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">
               {usuario.empresa?.nombre ?? "Sin empresa"}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[color:var(--text-muted)]">
               {usuario.departamento?.nombre ?? "Sin departamento"}
             </p>
           </div>
@@ -78,11 +82,11 @@ export default async function AjustesPage() {
       <AjustesForms nombre={usuario.nombre} email={usuario.email} />
 
       {usuario.rol === "GERENTE" && usuario.empresa && (
-        <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-          <h3 className="text-lg font-semibold text-slate-900">
+        <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
+          <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
             Configuracion de empresa
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[color:var(--text-muted)]">
             Define si la pausa cuenta como tiempo trabajado para tu empresa.
           </p>
           <div className="mt-6 max-w-sm">

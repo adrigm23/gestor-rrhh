@@ -1,0 +1,92 @@
+name: Database Backups
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+    - cron: "0 2 1 * *"
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: "Tipo de backup"
+        required: true
+        default: "daily"
+        type: choice
+        options:
+          - daily
+          - monthly
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+    steps:
+      - name: Comprobar secretos
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "Falta SUPABASE_DB_URL en GitHub Secrets"
+            exit 1
+          fi
+          if [ -z "${S3_BUCKET}" ]; then
+            echo "Falta S3_BUCKET en GitHub Secrets"
+            exit 1
+          fi
+          if [ -z "${AWS_REGION}" ]; then
+            echo "Falta AWS_REGION en GitHub Secrets"
+            exit 1
+          fi
+
+      - name: Resolver tipo de backup
+        id: vars
+        run: |
+          set -euo pipefail
+          TYPE="daily"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TYPE="${{ github.event.inputs.backup_type }}"
+          elif [ "${{ github.event.schedule }}" = "0 2 1 * *" ]; then
+            TYPE="monthly"
+          fi
+          echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar Supabase CLI
+        run: npm install -g supabase
+
+      - name: Dump de esquema
+        run: |
+          set -euo pipefail
+          mkdir -p backups
+          supabase db dump --db-url "${SUPABASE_DB_URL}" -f backups/schema.sql
+
+      - name: Dump de datos
+        run: |
+          set -euo pipefail
+          supabase db dump --db-url "${SUPABASE_DB_URL}" --data-only --use-copy -f backups/data.sql
+
+      - name: Empaquetar backup
+        run: |
+          set -euo pipefail
+          tar -czf "backup-${{ steps.vars.outputs.date }}.tar.gz" -C backups schema.sql data.sql
+          sha256sum "backup-${{ steps.vars.outputs.date }}.tar.gz" > "backup-${{ steps.vars.outputs.date }}.sha256"
+
+      - name: Configurar AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Subir a S3
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.vars.outputs.type }}" = "monthly" ]; then
+            DEST="monthly/${{ steps.vars.outputs.month }}/backup-${{ steps.vars.outputs.date }}"
+          else
+            DEST="daily/${{ steps.vars.outputs.date }}/backup-${{ steps.vars.outputs.date }}"
+          fi
+          aws s3 cp "backup-${{ steps.vars.outputs.date }}.tar.gz" "s3://${S3_BUCKET}/${DEST}.tar.gz"
+          aws s3 cp "backup-${{ steps.vars.outputs.date }}.sha256" "s3://${S3_BUCKET}/${DEST}.sha256"
