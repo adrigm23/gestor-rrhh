@@ -32,6 +32,11 @@ export type ResetPasswordState = {
   message?: string;
 };
 
+export type EliminarUsuarioState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
@@ -42,6 +47,8 @@ const emptyContratoSuccess: ContratoState = { status: "success" };
 const emptyContratoError: ContratoState = { status: "error" };
 const emptyResetSuccess: ResetPasswordState = { status: "success" };
 const emptyResetError: ResetPasswordState = { status: "error" };
+const emptyDeleteSuccess: EliminarUsuarioState = { status: "success" };
+const emptyDeleteError: EliminarUsuarioState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -500,4 +507,110 @@ export async function resetUsuarioPassword(
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyResetSuccess, message: "Contrasena actualizada." };
+}
+
+export async function eliminarUsuario(
+  _prevState: EliminarUsuarioState,
+  formData: FormData,
+): Promise<EliminarUsuarioState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyDeleteError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyDeleteError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  if (!usuarioId) {
+    return { ...emptyDeleteError, message: "Usuario invalido." };
+  }
+
+  if (usuarioId === session.user.id) {
+    return { ...emptyDeleteError, message: "No puedes eliminar tu propia cuenta." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: {
+      id: true,
+      rol: true,
+      _count: {
+        select: {
+          fichajes: true,
+          solicitudes: true,
+          solicitudesFichajeEnviadas: true,
+          solicitudesFichajeRecibidas: true,
+          solicitudesFichajeRespondidas: true,
+          passwordResetTokens: true,
+          justificanteAccesos: true,
+          gerenteDepartamentos: true,
+          gerenteCentros: true,
+          contratos: true,
+          exportacionesSolicitadas: true,
+        },
+      },
+    },
+  });
+
+  if (!usuario) {
+    return { ...emptyDeleteError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyDeleteError, message: "No se permite eliminar administradores." };
+  }
+
+  const blockers: string[] = [];
+  if (usuario._count.fichajes > 0) blockers.push("fichajes");
+  if (usuario._count.solicitudes > 0) blockers.push("solicitudes");
+  if (usuario._count.solicitudesFichajeEnviadas > 0) blockers.push("solicitudes enviadas");
+  if (usuario._count.solicitudesFichajeRecibidas > 0) blockers.push("solicitudes recibidas");
+  if (usuario._count.solicitudesFichajeRespondidas > 0) blockers.push("solicitudes respondidas");
+  if (usuario._count.justificanteAccesos > 0) blockers.push("justificantes");
+
+  if (blockers.length > 0) {
+    return {
+      ...emptyDeleteError,
+      message: `No se puede eliminar: el usuario tiene ${blockers.join(", ")} asociados.`,
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (usuario._count.gerenteDepartamentos > 0) {
+      await tx.departamento.updateMany({
+        where: { gerenteId: usuarioId },
+        data: { gerenteId: null },
+      });
+    }
+    if (usuario._count.gerenteCentros > 0) {
+      await tx.centroTrabajo.updateMany({
+        where: { gerenteId: usuarioId },
+        data: { gerenteId: null },
+      });
+    }
+    if (usuario._count.passwordResetTokens > 0) {
+      await tx.passwordResetToken.deleteMany({
+        where: { usuarioId },
+      });
+    }
+    if (usuario._count.contratos > 0) {
+      await tx.contrato.deleteMany({ where: { usuarioId } });
+    }
+    if (usuario._count.exportacionesSolicitadas > 0) {
+      await tx.exportacion.deleteMany({ where: { solicitadoPorId: usuarioId } });
+    }
+
+    await tx.usuario.delete({ where: { id: usuarioId } });
+  });
+
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyDeleteSuccess, message: "Usuario eliminado." };
 }

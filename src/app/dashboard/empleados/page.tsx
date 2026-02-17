@@ -7,6 +7,7 @@ import NfcAssignForm from "./nfc-assign-form";
 import EmpresaAssignForm from "./empresa-assign-form";
 import ContratoForm from "./contrato-form";
 import PasswordResetForm from "./password-reset-form";
+import UserDeleteForm from "./user-delete-form";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -29,6 +30,7 @@ export default async function EmpleadosPage({
   }
 
   const role = session.user?.role ?? "";
+  const currentUserId = session.user?.id ?? "";
   const resolvedSearchParams = (await searchParams) ?? {};
   const query = (getParam(resolvedSearchParams.q) ?? "").trim();
   const gerenteEmpresaId =
@@ -193,6 +195,11 @@ export default async function EmpleadosPage({
                         Tarjeta
                       </th>
                     )}
+                    {role === "ADMIN_SISTEMA" && (
+                      <th className="px-4 py-3 text-left font-semibold">
+                        Eliminar
+                      </th>
+                    )}
                     <th className="px-4 py-3 text-left font-semibold">
                       Alta
                     </th>
@@ -243,6 +250,16 @@ export default async function EmpleadosPage({
                           <NfcAssignForm
                             usuarioId={usuario.id}
                             tieneTarjeta={Boolean(usuario.nfcUidHash)}
+                          />
+                        </td>
+                      )}
+                      {role === "ADMIN_SISTEMA" && (
+                        <td className="px-4 py-3">
+                          <UserDeleteForm
+                            usuarioId={usuario.id}
+                            usuarioNombre={usuario.nombre}
+                            usuarioEmail={usuario.email}
+                            disabled={usuario.id === currentUserId}
                           />
                         </td>
                       )}
