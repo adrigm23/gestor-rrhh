@@ -6,6 +6,7 @@ import { prisma } from "../../lib/prisma";
 import NfcAssignForm from "./nfc-assign-form";
 import EmpresaAssignForm from "./empresa-assign-form";
 import ContratoForm from "./contrato-form";
+import PasswordResetForm from "./password-reset-form";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -28,7 +29,8 @@ export default async function EmpleadosPage({
   }
 
   const role = session.user?.role ?? "";
-  const query = (getParam(searchParams.q) ?? "").trim();
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const query = (getParam(resolvedSearchParams.q) ?? "").trim();
   const gerenteEmpresaId =
     role === "GERENTE"
       ? (
@@ -183,6 +185,11 @@ export default async function EmpleadosPage({
                     </th>
                     {role === "ADMIN_SISTEMA" && (
                       <th className="px-4 py-3 text-left font-semibold">
+                        Acceso
+                      </th>
+                    )}
+                    {role === "ADMIN_SISTEMA" && (
+                      <th className="px-4 py-3 text-left font-semibold">
                         Tarjeta
                       </th>
                     )}
@@ -226,6 +233,11 @@ export default async function EmpleadosPage({
                           }
                         />
                       </td>
+                      {role === "ADMIN_SISTEMA" && (
+                        <td className="px-4 py-3">
+                          <PasswordResetForm usuarioId={usuario.id} />
+                        </td>
+                      )}
                       {role === "ADMIN_SISTEMA" && (
                         <td className="px-4 py-3">
                           <NfcAssignForm

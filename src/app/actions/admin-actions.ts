@@ -27,6 +27,11 @@ export type ContratoState = {
   message?: string;
 };
 
+export type ResetPasswordState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
@@ -35,6 +40,8 @@ const emptyChangeSuccess: CambiarEmpresaState = { status: "success" };
 const emptyChangeError: CambiarEmpresaState = { status: "error" };
 const emptyContratoSuccess: ContratoState = { status: "success" };
 const emptyContratoError: ContratoState = { status: "error" };
+const emptyResetSuccess: ResetPasswordState = { status: "success" };
+const emptyResetError: ResetPasswordState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
@@ -435,4 +442,61 @@ export async function crearContrato(
   revalidatePath("/dashboard/empleados");
   revalidatePath("/dashboard/escritorio");
   return { ...emptyContratoSuccess, message: "Contrato actualizado." };
+}
+
+export async function resetUsuarioPassword(
+  _prevState: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyResetError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyResetError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const password = formData.get("password")?.toString() ?? "";
+
+  if (!usuarioId || !password) {
+    return { ...emptyResetError, message: "Completa todos los campos." };
+  }
+
+  if (password.length < 8) {
+    return {
+      ...emptyResetError,
+      message: "La contrasena debe tener 8 caracteres.",
+    };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyResetError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyResetError, message: "No se permite en este usuario." };
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: { password: hashedPassword },
+  });
+
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyResetSuccess, message: "Contrasena actualizada." };
 }

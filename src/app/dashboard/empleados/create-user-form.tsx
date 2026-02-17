@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Briefcase, CreditCard, User } from "lucide-react";
+import { Briefcase, CreditCard, Eye, EyeOff, User } from "lucide-react";
 import { crearUsuario, type CrearUsuarioState } from "../../actions/admin-actions";
 
 type EmpresaOption = {
@@ -33,6 +33,7 @@ export default function CreateUserForm({
   const [rol, setRol] = useState<"EMPLEADO" | "GERENTE">("EMPLEADO");
   const [empresaId, setEmpresaId] = useState("");
   const [horasSemanales, setHorasSemanales] = useState("40");
+  const [showPassword, setShowPassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -116,13 +117,23 @@ export default function CreateUserForm({
           <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
             Contrasena temporal
           </label>
-          <input
-            name="password"
-            type="password"
-            required
-            className={inputClass}
-            placeholder="********"
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              className={`${inputClass} pr-10`}
+              placeholder="********"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-1.5 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+              aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
           <p className="text-xs text-[color:var(--text-muted)]">
             Se pedira cambiar al primer inicio de sesion.
           </p>
