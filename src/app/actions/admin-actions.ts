@@ -432,7 +432,25 @@ export async function crearContrato(
 
       if (contratoActivo) {
         if (fechaInicio.getTime() <= contratoActivo.fechaInicio.getTime()) {
-          throw new Error("La fecha de inicio debe ser posterior al contrato activo.");
+          const contratoAnterior = await tx.contrato.findFirst({
+            where: { usuarioId, fechaFin: { not: null } },
+            orderBy: { fechaFin: "desc" },
+          });
+
+          if (
+            contratoAnterior?.fechaFin &&
+            fechaInicio.getTime() <= contratoAnterior.fechaFin.getTime()
+          ) {
+            throw new Error(
+              "La fecha de inicio debe ser posterior al fin del contrato anterior.",
+            );
+          }
+
+          await tx.contrato.update({
+            where: { id: contratoActivo.id },
+            data: { fechaInicio, horasSemanales },
+          });
+          return;
         }
 
         const fechaFin = new Date(fechaInicio.getTime() - 1);
@@ -453,7 +471,7 @@ export async function crearContrato(
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message === "La fecha de inicio debe ser posterior al contrato activo."
+      error.message.startsWith("La fecha de inicio debe ser posterior")
     ) {
       return { ...emptyContratoError, message: error.message };
     }
