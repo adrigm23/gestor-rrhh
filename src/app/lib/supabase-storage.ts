@@ -5,6 +5,8 @@ import crypto from "crypto";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? "justificantes";
+const EXPORT_BUCKET = process.env.SUPABASE_EXPORT_BUCKET ?? STORAGE_BUCKET;
+const STORAGE_BASE_URL = SUPABASE_URL.replace(/\/storage\/v1\/?$/, "");
 
 const requireConfig = () => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
@@ -85,7 +87,7 @@ export const uploadJustificante = async (
 
   const arrayBuffer = await file.arrayBuffer();
   const response = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    `${STORAGE_BASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
     {
       method: "POST",
       headers: {
@@ -111,11 +113,15 @@ export const uploadJustificante = async (
   };
 };
 
-export const createSignedUrl = async (ruta: string, seconds: number) => {
+export const createSignedUrl = async (
+  ruta: string,
+  seconds: number,
+  bucket: string = STORAGE_BUCKET,
+) => {
   requireConfig();
 
   const response = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/sign/${STORAGE_BUCKET}/${ruta}`,
+    `${STORAGE_BASE_URL}/storage/v1/object/sign/${bucket}/${ruta}`,
     {
       method: "POST",
       headers: {
@@ -137,14 +143,20 @@ export const createSignedUrl = async (ruta: string, seconds: number) => {
     throw new Error("No se genero URL");
   }
 
-  return `${SUPABASE_URL}${payload.signedURL}`;
+  const signedPath = payload.signedURL.startsWith("/")
+    ? payload.signedURL
+    : `/${payload.signedURL}`;
+  const fullPath = signedPath.startsWith("/storage/v1/")
+    ? signedPath
+    : `/storage/v1${signedPath}`;
+  return `${STORAGE_BASE_URL}${fullPath}`;
 };
 
 export const deleteJustificante = async (ruta: string) => {
   requireConfig();
 
   const response = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    `${STORAGE_BASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
     {
       method: "DELETE",
       headers: {
@@ -164,7 +176,7 @@ export const uploadExportCsv = async (content: string, ruta: string) => {
   requireConfig();
 
   const response = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${ruta}`,
+    `${STORAGE_BASE_URL}/storage/v1/object/${EXPORT_BUCKET}/${ruta}`,
     {
       method: "POST",
       headers: {
@@ -179,7 +191,10 @@ export const uploadExportCsv = async (content: string, ruta: string) => {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Error subiendo exportacion: ${errorText}`);
+    throw new Error(
+      `Error subiendo exportacion: ${errorText}. ` +
+        `Revisa los tipos MIME permitidos en el bucket "${EXPORT_BUCKET}" (debe permitir text/csv).`,
+    );
   }
 
   return ruta;

@@ -21,6 +21,10 @@ const emptySuccess: ExportacionState = { status: "success" };
 const emptyError: ExportacionState = { status: "error" };
 const MAX_EXPORT_ROWS = 25000;
 const runningExportJobs = new Set<string>();
+const EXPORT_BUCKET =
+  process.env.SUPABASE_EXPORT_BUCKET ??
+  process.env.SUPABASE_STORAGE_BUCKET ??
+  "justificantes";
 
 const parseDate = (value: string | null, endOfDay: boolean) => {
   if (!value) return null;
@@ -503,7 +507,11 @@ export async function obtenerExportacion(jobId: string): Promise<ExportacionStat
     }
 
     if (refreshed.estado === "LISTO" && refreshed.archivoRuta) {
-      const url = await createSignedUrl(refreshed.archivoRuta, 900);
+      const url = await createSignedUrl(
+        refreshed.archivoRuta,
+        900,
+        EXPORT_BUCKET,
+      );
       return { status: "LISTO", url };
     }
 
@@ -511,7 +519,7 @@ export async function obtenerExportacion(jobId: string): Promise<ExportacionStat
   }
 
   if (job.estado === "LISTO" && job.archivoRuta) {
-    const url = await createSignedUrl(job.archivoRuta, 900);
+    const url = await createSignedUrl(job.archivoRuta, 900, EXPORT_BUCKET);
     return { status: "LISTO", url };
   }
 
