@@ -93,7 +93,12 @@ export default function EmpleadosDirectory({
   );
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || selectedUser) return;
+    setSelectedId(null);
+  }, [selectedId, selectedUser]);
+
+  useEffect(() => {
+    if (!selectedUser) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const handleKey = (event: KeyboardEvent) => {
@@ -106,7 +111,7 @@ export default function EmpleadosDirectory({
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", handleKey);
     };
-  }, [selectedId]);
+  }, [selectedUser]);
 
   const isAdmin = role === "ADMIN_SISTEMA";
 
