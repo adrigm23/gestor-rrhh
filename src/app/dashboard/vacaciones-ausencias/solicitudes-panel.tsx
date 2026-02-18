@@ -25,7 +25,7 @@ export type SolicitudHistorial = {
   fin: string | null;
   motivo: string | null;
   ausenciaTipo: "FALTA" | "AVISO" | null;
-  estado: "APROBADA" | "RECHAZADA" | "PENDIENTE";
+  estado: "APROBADA" | "RECHAZADA" | "PENDIENTE" | "ANULADA";
   usuarioNombre: string;
   usuarioEmail: string;
 };
@@ -55,6 +55,7 @@ const resolveTipoLabel = (item: { tipo: "VACACIONES" | "AUSENCIA"; ausenciaTipo:
 const statusBadge = (estado: string) => {
   if (estado === "APROBADA") return "bg-emerald-100 text-emerald-700";
   if (estado === "RECHAZADA") return "bg-rose-100 text-rose-700";
+  if (estado === "ANULADA") return "bg-slate-100 text-slate-600";
   return "bg-amber-100 text-amber-700";
 };
 
@@ -90,7 +91,10 @@ export default function SolicitudesPanel({
     [historico, normalized],
   );
 
-  const handleDecision = (id: string, estado: "APROBADA" | "RECHAZADA") => {
+  const handleDecision = (
+    id: string,
+    estado: "APROBADA" | "RECHAZADA" | "ANULADA",
+  ) => {
     const formData = new FormData();
     formData.set("id", id);
     formData.set("estado", estado);
@@ -245,13 +249,14 @@ export default function SolicitudesPanel({
                 <th className="px-4 py-3 text-left font-semibold">Estado</th>
                 <th className="px-4 py-3 text-left font-semibold">Fechas</th>
                 <th className="px-4 py-3 text-left font-semibold">Motivo</th>
+                <th className="px-4 py-3 text-right font-semibold">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--card-border)]">
               {historicoFiltrado.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-6 text-center text-[color:var(--text-muted)]"
                   >
                     No hay solicitudes recientes.
@@ -270,7 +275,11 @@ export default function SolicitudesPanel({
                     </td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(item.estado)}`}>
-                        {item.estado === "APROBADA" ? "Aprobado" : "Rechazado"}
+                        {item.estado === "APROBADA"
+                          ? "Aprobado"
+                          : item.estado === "ANULADA"
+                            ? "Anulado"
+                            : "Rechazado"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -278,6 +287,22 @@ export default function SolicitudesPanel({
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {item.motivo || "Sin motivo"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {item.estado === "APROBADA" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDecision(item.id, "ANULADA")}
+                          disabled={isPending && pendingId === item.id}
+                          className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          Anular
+                        </button>
+                      ) : (
+                        <span className="text-xs text-[color:var(--text-muted)]">
+                          -
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

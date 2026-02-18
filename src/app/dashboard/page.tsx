@@ -1,6 +1,7 @@
 import { auth } from "../api/auth/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../lib/prisma";
+import { getApprovedLeaveType } from "../lib/vacaciones";
 import { toggleFichaje, togglePausa } from "../actions/fichaje-actions";
 import { Play, Pause, Clock } from "lucide-react";
 import FichajeTimer from "./fichaje-timer";
@@ -22,6 +23,9 @@ export default async function DashboardPage() {
   if (role === "ADMIN_SISTEMA") {
     redirect("/dashboard/escritorio");
   }
+
+  const approvedLeaveType = userId ? await getApprovedLeaveType(userId) : null;
+  const isOnLeave = Boolean(approvedLeaveType);
 
   const hoy = new Date().toLocaleDateString("es-ES", {
     weekday: "long",
@@ -173,11 +177,20 @@ export default async function DashboardPage() {
             </div>
           </div>
 
+          {isOnLeave && (
+            <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              {approvedLeaveType === "VACACIONES"
+                ? "Hoy tienes vacaciones aprobadas. No puedes registrar entradas ni salidas."
+                : "Hoy tienes una ausencia aprobada. No puedes registrar entradas ni salidas."}
+            </div>
+          )}
+
           {jornadaActiva ? (
             <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
               <form action={togglePausa}>
                 <button
-                  className={`flex w-full items-center justify-center gap-2 rounded-full py-5 text-lg font-semibold text-white shadow-2xl transition ${
+                  disabled={isOnLeave}
+                  className={`flex w-full items-center justify-center gap-2 rounded-full py-5 text-lg font-semibold text-white shadow-2xl transition disabled:cursor-not-allowed disabled:opacity-60 ${
                     pausaActiva
                       ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200/70"
                       : "bg-teal-500 hover:bg-teal-600 shadow-teal-200/70"
@@ -188,7 +201,10 @@ export default async function DashboardPage() {
                 </button>
               </form>
               <form action={toggleFichaje}>
-                <button className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 py-5 text-lg font-semibold text-white shadow-2xl shadow-slate-300/60 transition hover:brightness-110">
+                <button
+                  disabled={isOnLeave}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 py-5 text-lg font-semibold text-white shadow-2xl shadow-slate-300/60 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                   <Play size={18} className="rotate-180" />
                   Salir
                 </button>
@@ -196,7 +212,10 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <form action={toggleFichaje} className="mt-10">
-              <button className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-5 text-lg font-semibold text-white shadow-2xl shadow-sky-200/80 transition hover:brightness-110">
+              <button
+                disabled={isOnLeave}
+                className="w-full rounded-full bg-gradient-to-r from-teal-500 via-sky-500 to-sky-600 py-5 text-lg font-semibold text-white shadow-2xl shadow-sky-200/80 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 Registrar entrada
               </button>
             </form>

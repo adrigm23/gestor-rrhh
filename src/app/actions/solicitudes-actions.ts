@@ -229,7 +229,7 @@ export async function actualizarSolicitud(formData: FormData) {
     return;
   }
 
-  if (estado !== "APROBADA" && estado !== "RECHAZADA") {
+  if (estado !== "APROBADA" && estado !== "RECHAZADA" && estado !== "ANULADA") {
     return;
   }
 
@@ -257,12 +257,17 @@ export async function actualizarSolicitud(formData: FormData) {
     throw new Error("No autorizado");
   }
 
+  if (estado === "ANULADA" && solicitud.estado !== "APROBADA") {
+    return;
+  }
+
   await prisma.solicitud.update({
     where: { id: solicitudId },
     data: { estado },
   });
 
   revalidatePath("/dashboard/vacaciones-ausencias");
+  revalidatePath("/dashboard/calendario");
 }
 
 export async function eliminarJustificante(formData: FormData) {

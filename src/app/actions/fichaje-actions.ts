@@ -3,6 +3,7 @@
 
 import { auth } from "../api/auth/auth"; 
 import { prisma } from "../lib/prisma"; 
+import { getApprovedLeaveType } from "../lib/vacaciones";
 import { revalidatePath } from "next/cache";
 
 export async function toggleFichaje() {
@@ -14,6 +15,10 @@ export async function toggleFichaje() {
 
   const userId = session.user.id;
   const MAX_RETRIES = 2;
+
+  if (await getApprovedLeaveType(userId)) {
+    return;
+  }
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -83,6 +88,10 @@ export async function togglePausa() {
 
   const userId = session.user.id;
   const MAX_RETRIES = 2;
+
+  if (await getApprovedLeaveType(userId)) {
+    return;
+  }
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {

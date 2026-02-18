@@ -208,6 +208,7 @@ enum EstadoSolicitud {
   PENDIENTE
   APROBADA
   RECHAZADA
+  ANULADA
 }
 
 enum EstadoSolicitudFichaje {

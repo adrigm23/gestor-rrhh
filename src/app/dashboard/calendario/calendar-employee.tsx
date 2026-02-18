@@ -11,7 +11,7 @@ import {
 export type SolicitudResumen = {
   id: string;
   tipo: "VACACIONES" | "AUSENCIA";
-  estado: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+  estado: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "ANULADA";
   inicio: string;
   fin: string | null;
   createdAt: string;
@@ -80,6 +80,14 @@ const statusStyles: Record<SolicitudResumen["estado"], string> = {
   PENDIENTE: "bg-amber-100 text-amber-700",
   APROBADA: "bg-emerald-100 text-emerald-700",
   RECHAZADA: "bg-rose-100 text-rose-700",
+  ANULADA: "bg-slate-100 text-slate-600",
+};
+
+const statusLabel: Record<SolicitudResumen["estado"], string> = {
+  PENDIENTE: "Pendiente",
+  APROBADA: "Aprobada",
+  RECHAZADA: "Rechazada",
+  ANULADA: "Anulada",
 };
 
 const buildDateKey = (date: Date) => {
@@ -142,7 +150,7 @@ export default function CalendarioEmpleado({
     const ausencias = new Set<string>();
 
     solicitudes.forEach((item) => {
-      if (item.estado === "RECHAZADA") {
+      if (item.estado !== "APROBADA") {
         return;
       }
       const inicio = new Date(item.inicio);
@@ -522,7 +530,7 @@ export default function CalendarioEmpleado({
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[item.estado]}`}
                 >
-                  {item.estado}
+                  {statusLabel[item.estado]}
                 </span>
               </div>
             ))}

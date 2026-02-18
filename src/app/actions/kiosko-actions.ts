@@ -2,6 +2,7 @@
 
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
+import { getApprovedLeaveType } from "../lib/vacaciones";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
 import { revalidatePath } from "next/cache";
 
@@ -56,6 +57,17 @@ export async function registrarNfcKiosko(
 
   if (role === "GERENTE" && usuario.empresaId !== session.user.empresaId) {
     return { status: "error", message: "Tarjeta fuera de tu empresa." };
+  }
+
+  const approvedLeave = await getApprovedLeaveType(usuario.id);
+  if (approvedLeave) {
+    return {
+      status: "error",
+      message:
+        approvedLeave === "VACACIONES"
+          ? "Empleado en vacaciones aprobadas. No puede fichar."
+          : "Empleado con ausencia aprobada. No puede fichar.",
+    };
   }
 
   const MAX_RETRIES = 2;

@@ -51,12 +51,18 @@ export default async function VacacionesAusenciasPage() {
     };
   }>;
 
+  const historicoEstados = [
+    EstadoSolicitud.APROBADA,
+    EstadoSolicitud.RECHAZADA,
+    EstadoSolicitud.ANULADA,
+  ];
+
   const whereHistorico: Prisma.SolicitudWhereInput =
     role === "ADMIN_SISTEMA"
-      ? { estado: { in: [EstadoSolicitud.APROBADA, EstadoSolicitud.RECHAZADA] } }
+      ? { estado: { in: historicoEstados } }
       : gerenteEmpresaId
         ? {
-            estado: { in: [EstadoSolicitud.APROBADA, EstadoSolicitud.RECHAZADA] },
+            estado: { in: historicoEstados },
             usuario: { empresaId: gerenteEmpresaId },
           }
         : { estado: EstadoSolicitud.APROBADA, usuarioId: "__none__" };
