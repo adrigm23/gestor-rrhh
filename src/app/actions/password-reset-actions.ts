@@ -113,11 +113,8 @@ export async function resetPassword(
     return { ...emptyError, message: "Token invalido." };
   }
 
-  if (!newPassword || newPassword.length < 8) {
-    return {
-      ...emptyError,
-      message: "La nueva contrasena debe tener 8 caracteres.",
-    };
+  if (!newPassword.trim()) {
+    return { ...emptyError, message: "Introduce una contrasena valida." };
   }
 
   if (newPassword !== confirmPassword) {
