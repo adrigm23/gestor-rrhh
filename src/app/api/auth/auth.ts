@@ -219,11 +219,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role;
         session.user.empresaId = token.empresaId ?? null;
         if (userId) {
-          const dbUser = await prisma.usuario.findUnique({
-            where: { id: userId },
-            select: { passwordMustChange: true },
-          });
-          session.user.passwordMustChange = dbUser?.passwordMustChange ?? false;
+          try {
+            const dbUser = await prisma.usuario.findUnique({
+              where: { id: userId },
+              select: { passwordMustChange: true },
+            });
+            session.user.passwordMustChange = dbUser?.passwordMustChange ?? false;
+          } catch {
+            session.user.passwordMustChange = token.passwordMustChange ?? false;
+          }
         } else {
           session.user.passwordMustChange = token.passwordMustChange ?? false;
         }
