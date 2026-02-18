@@ -21,6 +21,7 @@ export type SolicitudResumen = {
 
 type CalendarioEmpleadoProps = {
   solicitudes: SolicitudResumen[];
+  fichajes: string[];
 };
 
 type FechaSeleccion = Date | null;
@@ -81,13 +82,30 @@ const statusStyles: Record<SolicitudResumen["estado"], string> = {
   RECHAZADA: "bg-rose-100 text-rose-700",
 };
 
+const buildDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addRangeToSet = (set: Set<string>, start: Date, end: Date) => {
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    set.add(buildDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+};
+
 export default function CalendarioEmpleado({
   solicitudes,
+  fichajes,
 }: CalendarioEmpleadoProps) {
   const [tab, setTab] = useState<"vacaciones" | "ausencia">("vacaciones");
   const [viewDate, setViewDate] = useState(() => new Date());
   const [rangeStart, setRangeStart] = useState<FechaSeleccion>(null);
   const [rangeEnd, setRangeEnd] = useState<FechaSeleccion>(null);
+  const vacacionesAnchorId = "solicitar-vacaciones";
 
   const [vacState, vacAction] = useActionState(
     solicitarVacaciones,
@@ -109,6 +127,35 @@ export default function CalendarioEmpleado({
       year: "numeric",
     }).format(new Date(year, month, 1));
   }, [month, year]);
+
+  const fichajeDays = useMemo(() => {
+    const set = new Set<string>();
+    fichajes.forEach((item) => {
+      const date = new Date(item);
+      set.add(buildDateKey(date));
+    });
+    return set;
+  }, [fichajes]);
+
+  const { vacacionesDays, ausenciaDays } = useMemo(() => {
+    const vacaciones = new Set<string>();
+    const ausencias = new Set<string>();
+
+    solicitudes.forEach((item) => {
+      if (item.estado === "RECHAZADA") {
+        return;
+      }
+      const inicio = new Date(item.inicio);
+      const fin = item.fin ? new Date(item.fin) : inicio;
+      if (item.tipo === "VACACIONES") {
+        addRangeToSet(vacaciones, inicio, fin);
+      } else {
+        addRangeToSet(ausencias, inicio, fin);
+      }
+    });
+
+    return { vacacionesDays: vacaciones, ausenciaDays: ausencias };
+  }, [solicitudes]);
 
   const startValue = rangeStart ? formatDateInput(rangeStart) : "";
   const endValue = rangeEnd ? formatDateInput(rangeEnd) : "";
@@ -142,6 +189,15 @@ export default function CalendarioEmpleado({
   const vacacionesCount = solicitudes.filter((s) => s.tipo === "VACACIONES").length;
   const ausenciasCount = solicitudes.filter((s) => s.tipo === "AUSENCIA").length;
   const pendientesCount = solicitudes.filter((s) => s.estado === "PENDIENTE").length;
+
+  const handleSolicitarVacaciones = () => {
+    setTab("vacaciones");
+    requestAnimationFrame(() => {
+      document
+        .getElementById(vacacionesAnchorId)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   return (
     <div className="space-y-10">
@@ -184,6 +240,7 @@ export default function CalendarioEmpleado({
         <aside className="space-y-6">
           <button
             type="button"
+            onClick={handleSolicitarVacaciones}
             className="w-full rounded-2xl bg-teal-500 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-200/70"
           >
             + Solicitar Vacaciones
@@ -234,7 +291,10 @@ export default function CalendarioEmpleado({
           </div>
         </aside>
 
-        <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
+        <section
+          id={vacacionesAnchorId}
+          className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]"
+        >
           {tab === "vacaciones" ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -279,19 +339,35 @@ export default function CalendarioEmpleado({
                   const selected = isInRange(date);
                   const isStart = rangeStart ? sameDay(date, rangeStart) : false;
                   const isEnd = rangeEnd ? sameDay(date, rangeEnd) : false;
+                  const dateKey = buildDateKey(date);
+                  const markers = [
+                    fichajeDays.has(dateKey) ? "bg-sky-500" : null,
+                    vacacionesDays.has(dateKey) ? "bg-emerald-500" : null,
+                    ausenciaDays.has(dateKey) ? "bg-amber-400" : null,
+                  ].filter(Boolean) as string[];
 
                   return (
                     <button
                       type="button"
                       key={date.toISOString()}
                       onClick={() => handleDayClick(date)}
-                      className={`flex h-11 items-center justify-center rounded-2xl text-sm font-medium transition ${
+                      className={`flex h-12 flex-col items-center justify-center rounded-2xl text-sm font-medium transition ${
                         selected
                           ? "bg-sky-100 text-sky-700"
                           : "text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-muted)]"
                       } ${isStart || isEnd ? "ring-2 ring-sky-400" : ""}`}
                     >
-                      {date.getDate()}
+                      <span>{date.getDate()}</span>
+                      {markers.length > 0 && (
+                        <span className="mt-1 flex items-center gap-1">
+                          {markers.map((color, idx) => (
+                            <span
+                              key={`${dateKey}-${color}-${idx}`}
+                              className={`h-1.5 w-1.5 rounded-full ${color}`}
+                            />
+                          ))}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

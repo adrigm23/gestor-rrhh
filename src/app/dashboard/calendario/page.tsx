@@ -13,14 +13,37 @@ export default async function CalendarioPage() {
   }
 
   const userId = session.user?.id;
+  const today = new Date();
+  const startRange = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+  const endRange = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59, 999);
 
-  const solicitudes = userId
-    ? await prisma.solicitud.findMany({
-        where: { usuarioId: userId },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-      })
-    : [];
+  const [solicitudes, fichajes] = userId
+    ? await Promise.all([
+        prisma.solicitud.findMany({
+          where: {
+            usuarioId: userId,
+            OR: [
+              { inicio: { gte: startRange, lte: endRange } },
+              { fin: { gte: startRange, lte: endRange } },
+              {
+                AND: [
+                  { inicio: { lte: startRange } },
+                  { fin: { gte: endRange } },
+                ],
+              },
+            ],
+          },
+          orderBy: { inicio: "asc" },
+        }),
+        prisma.fichaje.findMany({
+          where: {
+            usuarioId: userId,
+            entrada: { gte: startRange, lte: endRange },
+          },
+          select: { entrada: true },
+        }),
+      ])
+    : [[], []];
 
   const resumen: SolicitudResumen[] = solicitudes.map((item) => ({
     id: item.id,
@@ -33,6 +56,8 @@ export default async function CalendarioPage() {
     ausenciaTipo: item.ausenciaTipo ?? null,
   }));
 
-  return <CalendarioEmpleado solicitudes={resumen} />;
+  const fichajesResumen = fichajes.map((item) => item.entrada.toISOString());
+
+  return <CalendarioEmpleado solicitudes={resumen} fichajes={fichajesResumen} />;
 }
 
