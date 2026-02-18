@@ -110,6 +110,19 @@ export default async function FichajesPage({
       })
     : [];
 
+  const empresaNombre = empresaFiltro
+    ? isAdmin
+      ? empresas.find((empresa) => empresa.id === empresaFiltro)?.nombre ?? "Empresa"
+      : (
+          await prisma.empresa.findUnique({
+            where: { id: empresaFiltro },
+            select: { nombre: true },
+          })
+        )?.nombre ?? "Empresa"
+    : isAdmin
+      ? "Todas las empresas"
+      : "Empresa asignada";
+
   const empleados = empresaFiltro
     ? await prisma.usuario.findMany({
         where: { rol: "EMPLEADO", empresaId: empresaFiltro },
@@ -190,12 +203,28 @@ export default async function FichajesPage({
     empleadoId: empleadoParam,
   };
 
-  const empresaLabel =
-    isAdmin && empresaFiltro
-      ? empresas.find((empresa) => empresa.id === empresaFiltro)?.nombre ?? "Empresa"
-      : isAdmin
-        ? "Todas las empresas"
-        : null;
+  const empleadoLabel = empleadoParam
+    ? empleados.find((empleado) => empleado.id === empleadoParam)?.nombre ??
+      "Empleado seleccionado"
+    : "Todos";
+
+  const estadoLabel =
+    estadoParam === "abierto"
+      ? "Abiertos"
+      : estadoParam === "cerrado"
+        ? "Cerrados"
+        : "Todos";
+
+  const tipoLabel =
+    tipoParam === "PAUSA_COMIDA"
+      ? "Pausa comida"
+      : tipoParam === "DESCANSO"
+        ? "Descanso"
+        : tipoParam === "MEDICO"
+          ? "Medico"
+          : tipoParam === "JORNADA"
+            ? "Jornada"
+            : "Todos";
 
   return (
     <div className="space-y-8">
@@ -226,6 +255,27 @@ export default async function FichajesPage({
           />
         </div>
       </header>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--text-muted)]">
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Empresa: {empresaNombre}
+        </span>
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Empleado: {empleadoLabel}
+        </span>
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Estado: {estadoLabel}
+        </span>
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Tipo: {tipoLabel}
+        </span>
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Desde: {fromParam}
+        </span>
+        <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1">
+          Hasta: {toParam}
+        </span>
+      </div>
 
       <section className="rounded-[2.5rem] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]">
         <form
@@ -367,11 +417,11 @@ export default async function FichajesPage({
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm text-[color:var(--text-muted)]">
-              <span>{empresaLabel ? `Empresa: ${empresaLabel}` : "Resultados"}</span>
+              <span>Resultados</span>
               <span>{total}</span>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-[color:var(--card-border)]">
-              <table className="min-w-full text-sm">
+            <div className="overflow-x-auto rounded-2xl border border-[color:var(--card-border)]">
+              <table className="min-w-[960px] text-sm">
                 <thead className="bg-[color:var(--surface-muted)] text-xs uppercase tracking-wider text-[color:var(--text-muted)]">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">Empleado</th>

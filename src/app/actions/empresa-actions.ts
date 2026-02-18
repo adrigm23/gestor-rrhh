@@ -137,6 +137,17 @@ export async function eliminarEmpresa(
     return { ...emptyDeleteError, message: "Empresa no encontrada." };
   }
 
+  const admins = await prisma.usuario.count({
+    where: { empresaId, rol: "ADMIN_SISTEMA" },
+  });
+
+  if (admins > 0) {
+    return {
+      ...emptyDeleteError,
+      message: "No se puede eliminar: hay administradores asociados.",
+    };
+  }
+
   if (
     empresa._count.usuarios > 0 ||
     empresa._count.departamentos > 0 ||

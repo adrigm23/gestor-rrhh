@@ -199,106 +199,182 @@ export default function EmpleadosDirectory({
           <span>Usuarios registrados</span>
           <span>{usuarios.length}</span>
         </div>
-
-        <div className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
-          <div className="grid grid-cols-[2.2fr_1.4fr_0.6fr_1.4fr_auto] gap-4">
-            <span>Usuario &amp; rol</span>
-            <span>Organizacion</span>
-            <span>Contrato</span>
-            <span>Seguridad</span>
-            <span className="text-right">Acciones</span>
-          </div>
-        </div>
-
         {usuarios.length === 0 ? (
           <div className="px-6 py-8 text-sm text-[color:var(--text-muted)]">
             No hay usuarios registrados con los filtros actuales.
           </div>
         ) : (
-          <div className="divide-y divide-[color:var(--card-border)]">
-            {usuarios.map((usuario) => {
-              const initials = initialsFromName(usuario.nombre || "U");
-              const horasContrato = usuario.contratos[0]?.horasSemanales ?? null;
-              const departamento = usuario.departamento?.nombre ?? "Sin departamento";
-              const empresa = usuario.empresa?.nombre ?? "Sin empresa";
-              const passwordLabel = usuario.passwordMustChange
-                ? "Reset requerido"
-                : "Password activo";
-              const passwordClass = usuario.passwordMustChange
-                ? "text-amber-600"
-                : "text-emerald-600";
-              return (
-                <div
-                  key={usuario.id}
-                  className="grid grid-cols-[2.2fr_1.4fr_0.6fr_1.4fr_auto] gap-4 px-6 py-4 text-sm text-[color:var(--text-secondary)]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
-                      {initials}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[color:var(--text-primary)]">
-                          {usuario.nombre}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadge(
-                            usuario.rol,
-                          )}`}
-                        >
-                          {roleLabel(usuario.rol)}
-                        </span>
-                        {!usuario.activo && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                            Baja
-                          </span>
-                        )}
+          <>
+            <div className="md:hidden space-y-3 px-4 py-4">
+              {usuarios.map((usuario) => {
+                const initials = initialsFromName(usuario.nombre || "U");
+                const horasContrato = usuario.contratos[0]?.horasSemanales ?? null;
+                const departamento = usuario.departamento?.nombre ?? "Sin departamento";
+                const empresa = usuario.empresa?.nombre ?? "Sin empresa";
+                return (
+                  <div
+                    key={usuario.id}
+                    className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface)] p-4 shadow-[var(--shadow-soft)]"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[color:var(--text-primary)]">
+                              {usuario.nombre}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${roleBadge(
+                                usuario.rol,
+                              )}`}
+                            >
+                              {roleLabel(usuario.rol)}
+                            </span>
+                            {!usuario.activo && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                Baja
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-[color:var(--text-muted)]">
+                            {usuario.email}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-[color:var(--text-muted)]">
-                        {usuario.email}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(usuario.id)}
+                        className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+                        aria-label="Editar usuario"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <div className="inline-flex rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1 text-xs font-semibold text-[color:var(--text-secondary)]">
-                      {empresa}
+                    <div className="mt-3 text-xs text-[color:var(--text-muted)]">
+                      {empresa} · {departamento}
                     </div>
-                    <div className="text-xs text-[color:var(--text-muted)]">
-                      {departamento}
-                    </div>
-                  </div>
-
-                  <div className="text-sm font-semibold text-[color:var(--text-primary)]">
-                    {horasContrato ? `${horasContrato}h` : "Sin contrato"}
-                  </div>
-
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-[color:var(--text-secondary)]">
-                        NFC
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full border border-[color:var(--card-border)] px-3 py-1 text-[color:var(--text-secondary)]">
+                        {horasContrato ? `${horasContrato}h/sem` : "Sin contrato"}
                       </span>
-                      <span className="text-[color:var(--text-muted)]">
-                        {usuario.nfcUidHash ? "Asignado" : "No asignado"}
+                      <span className="rounded-full border border-[color:var(--card-border)] px-3 py-1 text-[color:var(--text-secondary)]">
+                        NFC: {usuario.nfcUidHash ? "Asignado" : "No asignado"}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 ${
+                          usuario.passwordMustChange
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {usuario.passwordMustChange ? "Reset requerido" : "Password activo"}
                       </span>
                     </div>
-                    <div className={passwordClass}>{passwordLabel}</div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(usuario.id)}
-                      className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
-                      aria-label="Editar usuario"
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
-                  </div>
+            <div className="hidden md:block">
+              <div className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+                <div className="grid grid-cols-[2.2fr_1.4fr_0.6fr_1.4fr_auto] gap-4">
+                  <span>Usuario &amp; rol</span>
+                  <span>Organizacion</span>
+                  <span>Contrato</span>
+                  <span>Seguridad</span>
+                  <span className="text-right">Acciones</span>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+              <div className="divide-y divide-[color:var(--card-border)]">
+                {usuarios.map((usuario) => {
+                  const initials = initialsFromName(usuario.nombre || "U");
+                  const horasContrato = usuario.contratos[0]?.horasSemanales ?? null;
+                  const departamento = usuario.departamento?.nombre ?? "Sin departamento";
+                  const empresa = usuario.empresa?.nombre ?? "Sin empresa";
+                  const passwordLabel = usuario.passwordMustChange
+                    ? "Reset requerido"
+                    : "Password activo";
+                  const passwordClass = usuario.passwordMustChange
+                    ? "text-amber-600"
+                    : "text-emerald-600";
+                  return (
+                    <div
+                      key={usuario.id}
+                      className="grid grid-cols-[2.2fr_1.4fr_0.6fr_1.4fr_auto] gap-4 px-6 py-4 text-sm text-[color:var(--text-secondary)]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[color:var(--text-primary)]">
+                              {usuario.nombre}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleBadge(
+                                usuario.rol,
+                              )}`}
+                            >
+                              {roleLabel(usuario.rol)}
+                            </span>
+                            {!usuario.activo && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                Baja
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-[color:var(--text-muted)]">
+                            {usuario.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="inline-flex rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1 text-xs font-semibold text-[color:var(--text-secondary)]">
+                          {empresa}
+                        </div>
+                        <div className="text-xs text-[color:var(--text-muted)]">
+                          {departamento}
+                        </div>
+                      </div>
+
+                      <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                        {horasContrato ? `${horasContrato}h` : "Sin contrato"}
+                      </div>
+
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[color:var(--text-secondary)]">
+                            NFC
+                          </span>
+                          <span className="text-[color:var(--text-muted)]">
+                            {usuario.nfcUidHash ? "Asignado" : "No asignado"}
+                          </span>
+                        </div>
+                        <div className={passwordClass}>{passwordLabel}</div>
+                      </div>
+
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(usuario.id)}
+                          className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+                          aria-label="Editar usuario"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
       </section>
 
