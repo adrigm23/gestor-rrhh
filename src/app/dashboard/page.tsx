@@ -5,14 +5,13 @@ import { getApprovedLeaveType } from "../lib/vacaciones";
 import { toggleFichaje, togglePausa } from "../actions/fichaje-actions";
 import {
   Play,
-  Pause,
-  Fingerprint,
   Bell,
   Settings,
   CalendarDays,
   AlertTriangle,
   MapPin,
-  ChevronRight,
+  LogOut,
+  Coffee,
 } from "lucide-react";
 import FichajeTimer from "./fichaje-timer";
 import PausaTimer from "./pausa-timer";
@@ -253,9 +252,9 @@ export default async function DashboardPage() {
       })
     : null;
 
-  const accionLabel = jornadaActiva ? "Finalizar jornada" : "Registrar entrada";
-  const accionHelper = jornadaActiva ? "Registrar salida" : "Iniciar jornada";
-  const pausaLabel = pausaActiva ? "Reanudar pausa" : "Pausa comida";
+  const accionLabel = jornadaActiva ? "Finalizar Jornada" : "Registrar Entrada";
+  const accionHelper = jornadaActiva ? "Registrar Salida" : "Iniciar Jornada";
+  const pausaLabel = pausaActiva ? "Reanudar pausa" : "Pausa Comida";
 
   const bannerTitle = jornadaActiva ? "Jornada abierta" : "Jornada cerrada";
   const bannerDescription = jornadaActiva
@@ -272,6 +271,15 @@ export default async function DashboardPage() {
   const bannerBadgeTone = jornadaActiva
     ? "bg-amber-100 text-amber-700"
     : "bg-slate-100 text-slate-600";
+
+  const conectadoLabel =
+    jornadaActiva && conectadoDesde
+      ? `Conectado desde ${conectadoDesde}`
+      : "Sin jornada activa";
+  const conectadoTone = jornadaActiva
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]";
+  const conectadoDot = jornadaActiva ? "bg-emerald-500" : "bg-slate-300";
 
   const solicitudesFichaje: SolicitudFichajeEmpleado[] =
     role === "EMPLEADO" && userId
@@ -380,33 +388,23 @@ export default async function DashboardPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
-                  Control de tiempo
+                  Control de Tiempo
                 </h2>
                 <p className="text-sm text-[color:var(--text-muted)]">
                   Registro de actividad diaria
                 </p>
               </div>
               <span
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-                  jornadaActiva
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]"
-                }`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${conectadoTone}`}
               >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    jornadaActiva ? "bg-emerald-500" : "bg-slate-300"
-                  }`}
-                />
-                {jornadaActiva && conectadoDesde
-                  ? `Conectado desde ${conectadoDesde}`
-                  : "Sin jornada activa"}
+                <span className={`h-2 w-2 rounded-full ${conectadoDot}`} />
+                {conectadoLabel}
               </span>
             </div>
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--text-muted)]">
                   Tiempo trabajado
                 </p>
                 <FichajeTimer
@@ -419,56 +417,45 @@ export default async function DashboardPage() {
                   secondsClassName="text-sky-500"
                   className="mt-3 block text-5xl font-semibold tracking-tight text-[color:var(--text-primary)]"
                 />
-                <div className="mt-6">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
-                    Tiempo en pausa
-                  </p>
-                  <PausaTimer
-                    pauseAccumulatedMs={pauseAccumulatedMs}
-                    pauseStartIso={pauseStartIso}
-                    showSeconds
-                    showSuffix={false}
-                    className="mt-2 block text-2xl font-semibold text-[color:var(--text-secondary)]"
-                  />
-                </div>
+                <div className="mt-5 h-px w-full bg-[color:var(--card-border)]" />
+                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-[color:var(--text-muted)]">
+                  Tiempo en pausa
+                </p>
+                <PausaTimer
+                  pauseAccumulatedMs={pauseAccumulatedMs}
+                  pauseStartIso={pauseStartIso}
+                  showSeconds
+                  showSuffix={false}
+                  className="mt-2 block text-2xl font-semibold text-slate-400"
+                />
               </div>
 
-              <div className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface-muted)] p-5">
-                <div className="flex items-center gap-4 rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-4 py-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
-                    <Fingerprint size={20} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+              <div className="flex flex-col gap-4">
+                <form action={toggleFichaje}>
+                  <button
+                    type="submit"
+                    disabled={isOnLeave}
+                    className="w-full rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface)] p-6 text-center shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition hover:border-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                      <LogOut size={20} />
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-[color:var(--text-primary)]">
                       {accionLabel}
                     </p>
                     <p className="text-xs text-[color:var(--text-muted)]">
                       {accionHelper}
                     </p>
-                  </div>
-                </div>
-                <form action={toggleFichaje} className="mt-4">
-                  <button
-                    type="submit"
-                    disabled={isOnLeave}
-                    className="flex w-full items-center justify-between rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-4 py-3 text-sm font-semibold text-[color:var(--text-secondary)] shadow-sm transition hover:border-sky-200 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {accionLabel}
-                    <ChevronRight size={16} />
                   </button>
                 </form>
                 {jornadaActiva && (
-                  <form action={togglePausa} className="mt-3">
+                  <form action={togglePausa}>
                     <button
                       type="submit"
                       disabled={isOnLeave}
-                      className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                        pausaActiva
-                          ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                          : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
-                      }`}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-600 shadow-sm transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {pausaActiva ? <Play size={16} /> : <Pause size={16} />}
+                      {pausaActiva ? <Play size={16} /> : <Coffee size={16} />}
                       {pausaLabel}
                     </button>
                   </form>
