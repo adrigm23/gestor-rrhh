@@ -7,13 +7,33 @@ type FichajeTimerProps = {
   pauseAccumulatedMs?: number;
   pauseStartIso?: string | null;
   className?: string;
+  showSeconds?: boolean;
+  showSuffix?: boolean;
+  highlightSeconds?: boolean;
+  secondsClassName?: string;
 };
 
-const formatDuration = (ms: number) => {
+const formatParts = (ms: number) => {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} Hrs`;
+  const seconds = totalSeconds % 60;
+  return {
+    hours: String(hours).padStart(2, "0"),
+    minutes: String(minutes).padStart(2, "0"),
+    seconds: String(seconds).padStart(2, "0"),
+  };
+};
+
+const formatDuration = (
+  ms: number,
+  options: { showSeconds: boolean; showSuffix: boolean },
+) => {
+  const parts = formatParts(ms);
+  const base = options.showSeconds
+    ? `${parts.hours}:${parts.minutes}:${parts.seconds}`
+    : `${parts.hours}:${parts.minutes}`;
+  return options.showSuffix ? `${base} Hrs` : base;
 };
 
 export default function FichajeTimer({
@@ -21,6 +41,10 @@ export default function FichajeTimer({
   pauseAccumulatedMs = 0,
   pauseStartIso,
   className,
+  showSeconds = false,
+  showSuffix = true,
+  highlightSeconds = false,
+  secondsClassName,
 }: FichajeTimerProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -43,9 +67,24 @@ export default function FichajeTimer({
     return () => window.clearInterval(id);
   }, [pauseAccumulatedMs, pauseStartIso, startIso]);
 
+  const displayMs = startIso ? elapsedMs : 0;
+  const parts = formatParts(displayMs);
+  const fallbackLabel = formatDuration(displayMs, { showSeconds, showSuffix });
+  const suffix = showSuffix ? " Hrs" : "";
+
   return (
     <span className={className} suppressHydrationWarning>
-      {startIso ? formatDuration(elapsedMs) : "00:00 Hrs"}
+      {showSeconds && highlightSeconds ? (
+        <>
+          {parts.hours}:{parts.minutes}:
+          <span className={secondsClassName ?? "text-sky-500"}>
+            {parts.seconds}
+          </span>
+          {suffix}
+        </>
+      ) : (
+        fallbackLabel
+      )}
     </span>
   );
 }

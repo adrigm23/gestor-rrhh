@@ -6,19 +6,30 @@ type PausaTimerProps = {
   pauseAccumulatedMs?: number;
   pauseStartIso?: string | null;
   className?: string;
+  showSeconds?: boolean;
+  showSuffix?: boolean;
 };
 
-const formatDuration = (ms: number) => {
+const formatDuration = (
+  ms: number,
+  options: { showSeconds: boolean; showSuffix: boolean },
+) => {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} Hrs`;
+  const seconds = totalSeconds % 60;
+  const base = options.showSeconds
+    ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    : `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  return options.showSuffix ? `${base} Hrs` : base;
 };
 
 export default function PausaTimer({
   pauseAccumulatedMs = 0,
   pauseStartIso,
   className,
+  showSeconds = false,
+  showSuffix = true,
 }: PausaTimerProps) {
   const [elapsedMs, setElapsedMs] = useState(pauseAccumulatedMs);
 
@@ -37,7 +48,7 @@ export default function PausaTimer({
 
   return (
     <span className={className} suppressHydrationWarning>
-      {formatDuration(elapsedMs)}
+      {formatDuration(elapsedMs, { showSeconds, showSuffix })}
     </span>
   );
 }
