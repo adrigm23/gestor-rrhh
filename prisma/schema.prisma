@@ -57,6 +57,8 @@ model Fichaje {
 
   latitud       Float?
   longitud      Float?
+  latitudSalida Float?
+  longitudSalida Float?
 
   editado       Boolean     @default(false)
   motivoEdicion String?

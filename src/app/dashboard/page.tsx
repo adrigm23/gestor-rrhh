@@ -2,7 +2,7 @@ import { auth } from "../api/auth/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../lib/prisma";
 import { getApprovedLeaveType } from "../lib/vacaciones";
-import { toggleFichaje, togglePausa } from "../actions/fichaje-actions";
+import { togglePausa } from "../actions/fichaje-actions";
 import {
   Play,
   Bell,
@@ -10,10 +10,10 @@ import {
   CalendarDays,
   AlertTriangle,
   MapPin,
-  LogOut,
   Coffee,
 } from "lucide-react";
 import FichajeTimer from "./fichaje-timer";
+import FichajeGeoForm from "./fichaje-geo-form";
 import PausaTimer from "./pausa-timer";
 import SolicitudesFichajeEmpleado, {
   type SolicitudFichajeEmpleado,
@@ -431,23 +431,11 @@ export default async function DashboardPage() {
               </div>
 
               <div className="flex flex-col gap-4">
-                <form action={toggleFichaje}>
-                  <button
-                    type="submit"
-                    disabled={isOnLeave}
-                    className="w-full rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--surface)] p-6 text-center shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition hover:border-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                      <LogOut size={20} />
-                    </div>
-                    <p className="mt-4 text-sm font-semibold text-[color:var(--text-primary)]">
-                      {accionLabel}
-                    </p>
-                    <p className="text-xs text-[color:var(--text-muted)]">
-                      {accionHelper}
-                    </p>
-                  </button>
-                </form>
+                <FichajeGeoForm
+                  disabled={isOnLeave}
+                  accionLabel={accionLabel}
+                  accionHelper={accionHelper}
+                />
                 {jornadaActiva && (
                   <form action={togglePausa}>
                     <button
@@ -505,7 +493,8 @@ export default async function DashboardPage() {
                     {actividadReciente.map((fichaje) => {
                       const estado = fichaje.salida ? "Completado" : "En curso";
                       const ubicacion =
-                        fichaje.latitud && fichaje.longitud
+                        (fichaje.latitud && fichaje.longitud) ||
+                        (fichaje.latitudSalida && fichaje.longitudSalida)
                           ? "Ubicacion GPS"
                           : centroTrabajoNombre;
                       return (

@@ -1,12 +1,18 @@
 // src/actions/fichaje-actions.ts
 "use server";
 
-import { auth } from "../api/auth/auth"; 
-import { prisma } from "../lib/prisma"; 
+import { auth } from "../api/auth/auth";
+import { prisma } from "../lib/prisma";
 import { getApprovedLeaveType } from "../lib/vacaciones";
 import { revalidatePath } from "next/cache";
 
-export async function toggleFichaje() {
+const parseCoord = (value: FormDataEntryValue | null) => {
+  if (!value || typeof value !== "string") return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export async function toggleFichaje(formData?: FormData) {
   const session = await auth();
   
   if (!session?.user?.id) {
@@ -15,6 +21,9 @@ export async function toggleFichaje() {
 
   const userId = session.user.id;
   const MAX_RETRIES = 2;
+  const latitud = parseCoord(formData?.get("latitud") ?? null);
+  const longitud = parseCoord(formData?.get("longitud") ?? null);
+  const hasCoords = latitud !== null && longitud !== null;
 
   if (await getApprovedLeaveType(userId)) {
     return;
@@ -52,7 +61,12 @@ export async function toggleFichaje() {
 
             await tx.fichaje.update({
               where: { id: ultimoFichaje.id },
-              data: { salida: new Date() },
+              data: {
+                salida: new Date(),
+                ...(hasCoords
+                  ? { latitudSalida: latitud, longitudSalida: longitud }
+                  : {}),
+              },
             });
             return;
           }
@@ -62,6 +76,7 @@ export async function toggleFichaje() {
               usuarioId: userId,
               entrada: new Date(),
               tipo: "JORNADA",
+              ...(hasCoords ? { latitud, longitud } : {}),
             },
           });
         },
