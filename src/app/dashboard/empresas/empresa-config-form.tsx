@@ -9,6 +9,7 @@ import {
 type EmpresaConfigFormProps = {
   empresaId: string;
   pausaCuentaComoTrabajo: boolean;
+  geolocalizacionFichaje: boolean;
 };
 
 const initialState: EmpresaConfigState = { status: "idle" };
@@ -16,6 +17,7 @@ const initialState: EmpresaConfigState = { status: "idle" };
 export default function EmpresaConfigForm({
   empresaId,
   pausaCuentaComoTrabajo,
+  geolocalizacionFichaje,
 }: EmpresaConfigFormProps) {
   const [state, formAction, pending] = useActionState(
     actualizarPausaEmpresa,
@@ -24,10 +26,14 @@ export default function EmpresaConfigForm({
   const [value, setValue] = useState(
     pausaCuentaComoTrabajo ? "true" : "false",
   );
+  const [geoValue, setGeoValue] = useState(
+    geolocalizacionFichaje ? "true" : "false",
+  );
 
   useEffect(() => {
     if (state.status === "success") {
       setValue((prev) => prev);
+      setGeoValue((prev) => prev);
     }
   }, [state.status]);
 
@@ -49,6 +55,15 @@ export default function EmpresaConfigForm({
       >
         <option value="true">La pausa cuenta</option>
         <option value="false">La pausa NO cuenta</option>
+      </select>
+      <select
+        name="geoFichaje"
+        value={geoValue}
+        onChange={(event) => setGeoValue(event.target.value)}
+        className="w-full rounded-xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-2 py-2 text-xs text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+      >
+        <option value="false">Sin geolocalizacion</option>
+        <option value="true">Geolocalizacion activa</option>
       </select>
       <button
         type="submit"

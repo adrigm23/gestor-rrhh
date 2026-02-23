@@ -187,6 +187,8 @@ export async function actualizarPausaEmpresa(
   const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
   const valorRaw = formData.get("pausaCuenta")?.toString() ?? "true";
   const pausaCuenta = valorRaw === "true" || valorRaw === "1";
+  const geoRaw = formData.get("geoFichaje")?.toString() ?? "false";
+  const geolocalizacionFichaje = geoRaw === "true" || geoRaw === "1";
 
   if (!empresaId) {
     return { ...emptyConfigError, message: "Empresa invalida." };
@@ -211,7 +213,10 @@ export async function actualizarPausaEmpresa(
 
   await prisma.empresa.update({
     where: { id: empresaId },
-    data: { pausaCuentaComoTrabajo: pausaCuenta },
+    data: {
+      pausaCuentaComoTrabajo: pausaCuenta,
+      geolocalizacionFichaje,
+    },
   });
 
   revalidatePath("/dashboard/empresas");

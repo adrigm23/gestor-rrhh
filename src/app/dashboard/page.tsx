@@ -158,7 +158,13 @@ export default async function DashboardPage() {
     ? await prisma.usuario.findUnique({
         where: { id: userId },
         select: {
-          empresa: { select: { nombre: true, pausaCuentaComoTrabajo: true } },
+          empresa: {
+            select: {
+              nombre: true,
+              pausaCuentaComoTrabajo: true,
+              geolocalizacionFichaje: true,
+            },
+          },
           departamento: {
             select: {
               nombre: true,
@@ -173,6 +179,7 @@ export default async function DashboardPage() {
   const centroTrabajoNombre =
     userMeta?.departamento?.centroTrabajo?.nombre ?? "Oficina central";
   const pausaCuenta = userMeta?.empresa?.pausaCuentaComoTrabajo ?? true;
+  const geoEnabled = userMeta?.empresa?.geolocalizacionFichaje ?? false;
 
   const weekRange = clampRange(startOfWeek(now), endOfWeek(now), now);
 
@@ -433,6 +440,7 @@ export default async function DashboardPage() {
               <div className="flex flex-col gap-4">
                 <FichajeGeoForm
                   disabled={isOnLeave}
+                  enabled={geoEnabled}
                   accionLabel={accionLabel}
                   accionHelper={accionHelper}
                 />

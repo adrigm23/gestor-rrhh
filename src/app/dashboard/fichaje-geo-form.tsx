@@ -6,6 +6,7 @@ import { toggleFichaje } from "../actions/fichaje-actions";
 
 type FichajeGeoFormProps = {
   disabled?: boolean;
+  enabled?: boolean;
   accionLabel: string;
   accionHelper: string;
 };
@@ -18,6 +19,7 @@ const GEO_OPTIONS: PositionOptions = {
 
 export default function FichajeGeoForm({
   disabled = false,
+  enabled = false,
   accionLabel,
   accionHelper,
 }: FichajeGeoFormProps) {
@@ -40,6 +42,10 @@ export default function FichajeGeoForm({
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (!enabled) {
+      return;
+    }
+
     if (skipRef.current) {
       skipRef.current = false;
       return;
@@ -55,7 +61,9 @@ export default function FichajeGeoForm({
     setIsLoading(true);
 
     if (!("geolocation" in navigator)) {
-      setGeoError("Tu navegador no permite geolocalizacion. Se registrara sin ubicacion.");
+      setGeoError(
+        "Tu navegador no permite geolocalizacion. Se registrara sin ubicacion.",
+      );
       submitForm();
       setIsLoading(false);
       return;
@@ -72,8 +80,28 @@ export default function FichajeGeoForm({
         submitForm();
         setIsLoading(false);
       },
-      () => {
-        setGeoError("No se pudo obtener tu ubicacion. Se registrara sin ubicacion.");
+      (error) => {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setGeoError(
+              "Permiso de ubicacion denegado. Se registrara sin ubicacion.",
+            );
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGeoError(
+              "Ubicacion no disponible. Se registrara sin ubicacion.",
+            );
+            break;
+          case error.TIMEOUT:
+            setGeoError(
+              "Tiempo de espera agotado. Se registrara sin ubicacion.",
+            );
+            break;
+          default:
+            setGeoError(
+              "No se pudo obtener tu ubicacion. Se registrara sin ubicacion.",
+            );
+        }
         submitForm();
         setIsLoading(false);
       },
@@ -98,10 +126,12 @@ export default function FichajeGeoForm({
         </p>
         <p className="text-xs text-[color:var(--text-muted)]">{accionHelper}</p>
       </button>
-      <p className="mt-3 text-[11px] text-[color:var(--text-muted)]">
-        Se solicitara tu ubicacion al registrar entrada o salida.
-      </p>
-      {geoError && (
+      {enabled && (
+        <p className="mt-3 text-[11px] text-[color:var(--text-muted)]">
+          Se solicitara tu ubicacion al registrar entrada o salida.
+        </p>
+      )}
+      {enabled && geoError && (
         <p className="mt-2 text-xs text-amber-600">{geoError}</p>
       )}
     </form>

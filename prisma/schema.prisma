@@ -15,6 +15,7 @@ model Empresa {
   cif       String    @unique
   plan      String    @default("FREE")
   pausaCuentaComoTrabajo Boolean @default(true)
+  geolocalizacionFichaje Boolean @default(false)
   usuarios  Usuario[]
   departamentos Departamento[]
   centrosTrabajo CentroTrabajo[]

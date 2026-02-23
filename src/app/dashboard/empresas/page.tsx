@@ -18,14 +18,15 @@ export default async function EmpresasPage() {
   }
 
   const empresas = await prisma.empresa.findMany({
-    select: {
-      id: true,
-      nombre: true,
-      cif: true,
-      pausaCuentaComoTrabajo: true,
-      createdAt: true,
-      _count: { select: { usuarios: true, departamentos: true, centrosTrabajo: true } },
-    },
+      select: {
+        id: true,
+        nombre: true,
+        cif: true,
+        pausaCuentaComoTrabajo: true,
+        geolocalizacionFichaje: true,
+        createdAt: true,
+        _count: { select: { usuarios: true, departamentos: true, centrosTrabajo: true } },
+      },
     orderBy: { createdAt: "desc" },
   });
 
@@ -68,7 +69,7 @@ export default async function EmpresasPage() {
                     <th className="px-4 py-3 text-left font-semibold">Nombre</th>
                     <th className="px-4 py-3 text-left font-semibold">CIF</th>
                     <th className="px-4 py-3 text-left font-semibold">
-                      Pausa
+                      Configuracion
                     </th>
                     <th className="px-4 py-3 text-left font-semibold">Usuarios</th>
                     <th className="px-4 py-3 text-left font-semibold">
@@ -91,6 +92,7 @@ export default async function EmpresasPage() {
                         <EmpresaConfigForm
                           empresaId={empresa.id}
                           pausaCuentaComoTrabajo={empresa.pausaCuentaComoTrabajo}
+                          geolocalizacionFichaje={empresa.geolocalizacionFichaje}
                         />
                       </td>
                       <td className="px-4 py-3">{empresa._count.usuarios}</td>
