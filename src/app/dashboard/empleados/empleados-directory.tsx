@@ -17,6 +17,7 @@ import PasswordResetForm from "./password-reset-form";
 import NfcAssignForm from "./nfc-assign-form";
 import UserStatusForm from "./user-status-form";
 import EmailUpdateForm from "./email-update-form";
+import UserDeleteForm from "./user-delete-form";
 
 type EmpresaOption = {
   id: string;
@@ -54,6 +55,9 @@ type EmpleadosDirectoryProps = {
   rolParam: string;
   empresaParam: string;
   usuarios: UsuarioItem[];
+  totalUsuarios: number;
+  page: number;
+  pageSize: number;
   empresas: EmpresaOption[];
   departamentos: DepartamentoOption[];
 };
@@ -83,6 +87,9 @@ export default function EmpleadosDirectory({
   rolParam,
   empresaParam,
   usuarios,
+  totalUsuarios,
+  page,
+  pageSize,
   empresas,
   departamentos,
 }: EmpleadosDirectoryProps) {
@@ -114,6 +121,18 @@ export default function EmpleadosDirectory({
   }, [selectedUser]);
 
   const isAdmin = role === "ADMIN_SISTEMA";
+  const totalPages = Math.max(1, Math.ceil(totalUsuarios / pageSize));
+
+  const buildPageHref = (targetPage: number) => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (empresaParam) params.set("empresaId", empresaParam);
+    if (rolParam && rolParam !== "todos") params.set("rol", rolParam);
+    if (estadoParam && estadoParam !== "activos") params.set("estado", estadoParam);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    const suffix = params.toString();
+    return suffix ? `/dashboard/empleados?${suffix}` : "/dashboard/empleados";
+  };
 
   return (
     <div className="space-y-8">
@@ -197,7 +216,7 @@ export default function EmpleadosDirectory({
       <section className="rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--card)] shadow-[var(--shadow-card)]">
         <div className="flex items-center justify-between border-b border-[color:var(--card-border)] px-6 py-4 text-sm text-[color:var(--text-muted)]">
           <span>Usuarios registrados</span>
-          <span>{usuarios.length}</span>
+          <span>{totalUsuarios}</span>
         </div>
         {usuarios.length === 0 ? (
           <div className="px-6 py-8 text-sm text-[color:var(--text-muted)]">
@@ -378,6 +397,38 @@ export default function EmpleadosDirectory({
         )}
       </section>
 
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--card)] px-4 py-3 text-sm text-[color:var(--text-muted)]">
+          <span>
+            Pagina {page} de {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <a
+              href={buildPageHref(Math.max(1, page - 1))}
+              aria-disabled={page <= 1}
+              className={`rounded-full border border-[color:var(--card-border)] px-3 py-1.5 text-sm font-semibold transition ${
+                page <= 1
+                  ? "pointer-events-none bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
+                  : "bg-[color:var(--surface)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+              }`}
+            >
+              Anterior
+            </a>
+            <a
+              href={buildPageHref(Math.min(totalPages, page + 1))}
+              aria-disabled={page >= totalPages}
+              className={`rounded-full border border-[color:var(--card-border)] px-3 py-1.5 text-sm font-semibold transition ${
+                page >= totalPages
+                  ? "pointer-events-none bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
+                  : "bg-[color:var(--surface)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+              }`}
+            >
+              Siguiente
+            </a>
+          </div>
+        </div>
+      )}
+
       {selectedUser && (
         <div className="fixed inset-0 z-50">
           <div
@@ -501,6 +552,11 @@ export default function EmpleadosDirectory({
                       usuarioNombre={selectedUser.nombre}
                       usuarioEmail={selectedUser.email}
                       activo={selectedUser.activo}
+                      disabled={selectedUser.id === currentUserId}
+                    />
+                    <UserDeleteForm
+                      usuarioId={selectedUser.id}
+                      usuarioNombre={selectedUser.nombre}
                       disabled={selectedUser.id === currentUserId}
                     />
                   </div>

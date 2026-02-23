@@ -1,6 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { hashNfcUid, sanitizeNfcUid } from "../../utils/nfc";
 import EmpleadosDirectory from "./empleados-directory";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -57,60 +59,80 @@ export default async function EmpleadosPage({
         )?.empresaId ?? null
       : null;
 
-  const usuarios = await prisma.usuario.findMany({
-    where:
-      role === "ADMIN_SISTEMA"
+  const pageParamRaw = getParam(resolvedSearchParams.page) ?? "1";
+  const page = Math.max(1, Number.parseInt(pageParamRaw, 10) || 1);
+  const pageSize = 20;
+  const skip = (page - 1) * pageSize;
+
+  const nfcQuery = sanitizeNfcUid(query);
+  let nfcHash: string | null = null;
+  if (query && nfcQuery) {
+    try {
+      nfcHash = hashNfcUid(nfcQuery);
+    } catch {
+      nfcHash = null;
+    }
+  }
+
+  const buildSearchFilters = (): Prisma.UsuarioWhereInput =>
+    query
+      ? {
+          OR: [
+            { nombre: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+            ...(nfcHash ? [{ nfcUidHash: nfcHash }] : []),
+          ],
+        }
+      : {};
+
+  const whereClause: Prisma.UsuarioWhereInput =
+    role === "ADMIN_SISTEMA"
+      ? {
+          rol:
+            rolParam === "todos"
+              ? { in: ["EMPLEADO", "GERENTE"] }
+              : rolParam,
+          ...(empresaParam ? { empresaId: empresaParam } : {}),
+          ...estadoWhere,
+          ...buildSearchFilters(),
+        }
+      : gerenteEmpresaId
         ? {
-            rol:
-              rolParam === "todos"
-                ? { in: ["EMPLEADO", "GERENTE"] }
-                : rolParam,
-            ...(empresaParam ? { empresaId: empresaParam } : {}),
+            rol: "EMPLEADO",
+            empresaId: gerenteEmpresaId,
             ...estadoWhere,
-            ...(query
-              ? {
-                  OR: [
-                    { nombre: { contains: query, mode: "insensitive" } },
-                    { email: { contains: query, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
+            ...buildSearchFilters(),
           }
-        : gerenteEmpresaId
-          ? {
-              rol: "EMPLEADO",
-              empresaId: gerenteEmpresaId,
-              ...estadoWhere,
-              ...(query
-                ? {
-                    OR: [
-                      { nombre: { contains: query, mode: "insensitive" } },
-                      { email: { contains: query, mode: "insensitive" } },
-                    ],
-                  }
-                : {}),
-            }
-          : { rol: "EMPLEADO", id: "__none__" },
+        : { rol: "EMPLEADO", id: "__none__" };
+
+  const usuarios = await prisma.usuario.findMany({
+    where: whereClause,
     orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        rol: true,
-        activo: true,
-        fechaBaja: true,
-        createdAt: true,
-        nfcUidHash: true,
-        passwordMustChange: true,
-        empresaId: true,
-        empresa: { select: { nombre: true } },
-        departamento: { select: { nombre: true } },
-        contratos: {
-          orderBy: { fechaInicio: "desc" },
-          take: 1,
-          select: { horasSemanales: true, fechaInicio: true },
-        },
+    skip,
+    take: pageSize,
+    select: {
+      id: true,
+      nombre: true,
+      email: true,
+      rol: true,
+      activo: true,
+      fechaBaja: true,
+      createdAt: true,
+      nfcUidHash: true,
+      passwordMustChange: true,
+      empresaId: true,
+      empresa: { select: { nombre: true } },
+      departamento: { select: { nombre: true } },
+      contratos: {
+        orderBy: { fechaInicio: "desc" },
+        take: 1,
+        select: { horasSemanales: true, fechaInicio: true },
       },
+    },
+  });
+
+  const totalUsuarios = await prisma.usuario.count({
+    where: whereClause,
   });
 
   const departamentos = await prisma.departamento.findMany({
@@ -146,6 +168,9 @@ export default async function EmpleadosPage({
       rolParam={rolParam}
       empresaParam={empresaParam}
       usuarios={usuarios}
+      totalUsuarios={totalUsuarios}
+      page={page}
+      pageSize={pageSize}
       empresas={empresas}
       departamentos={departamentos}
     />

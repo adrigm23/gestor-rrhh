@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   actualizarEmailUsuario,
   type UpdateEmailState,
@@ -21,11 +22,18 @@ export default function EmailUpdateForm({
     actualizarEmailUsuario,
     initialState,
   );
+  const router = useRouter();
   const [value, setValue] = useState(email);
 
   useEffect(() => {
     setValue(email);
   }, [email]);
+
+  useEffect(() => {
+    if (state.status === "success") {
+      router.refresh();
+    }
+  }, [state.status, router]);
 
   const statusClass =
     state.status === "error"

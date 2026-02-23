@@ -222,5 +222,6 @@ export async function actualizarPausaEmpresa(
   revalidatePath("/dashboard/empresas");
   revalidatePath("/dashboard/ajustes");
   revalidatePath("/dashboard/escritorio");
+  revalidatePath("/dashboard");
   return { ...emptyConfigSuccess, message: "Preferencia actualizada." };
 }

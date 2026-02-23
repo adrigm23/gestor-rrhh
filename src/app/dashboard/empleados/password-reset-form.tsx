@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   resetUsuarioPassword,
   type ResetPasswordState,
@@ -18,6 +19,7 @@ export default function PasswordResetForm({ usuarioId }: PasswordResetFormProps)
     resetUsuarioPassword,
     initialState,
   );
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,8 +27,9 @@ export default function PasswordResetForm({ usuarioId }: PasswordResetFormProps)
     if (state.status === "success") {
       setPassword("");
       setShowPassword(false);
+      router.refresh();
     }
-  }, [state.status]);
+  }, [state.status, router]);
 
   const statusClass =
     state.status === "error"

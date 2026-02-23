@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   cambiarEmpresaUsuario,
   type CambiarEmpresaState,
@@ -28,6 +29,7 @@ export default function EmpresaAssignForm({
     cambiarEmpresaUsuario,
     initialState,
   );
+  const router = useRouter();
   const [empresaId, setEmpresaId] = useState(
     empresaIdActual ?? empresas[0]?.id ?? "",
   );
@@ -35,8 +37,9 @@ export default function EmpresaAssignForm({
   useEffect(() => {
     if (state.status === "success") {
       setEmpresaId((prev) => prev);
+      router.refresh();
     }
-  }, [state.status]);
+  }, [state.status, router]);
 
   useEffect(() => {
     if (empresaIdActual) {

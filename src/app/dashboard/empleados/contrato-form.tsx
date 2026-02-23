@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { crearContrato, type ContratoState } from "../../actions/admin-actions";
 
 type ContratoFormProps = {
@@ -20,6 +21,7 @@ export default function ContratoForm({
     crearContrato,
     initialState,
   );
+  const router = useRouter();
   const [horas, setHoras] = useState(
     horasActuales ? String(horasActuales) : "40",
   );
@@ -30,8 +32,9 @@ export default function ContratoForm({
   useEffect(() => {
     if (state.status === "success") {
       setHoras((prev) => prev);
+      router.refresh();
     }
-  }, [state.status]);
+  }, [state.status, router]);
 
   const statusClass =
     state.status === "error"

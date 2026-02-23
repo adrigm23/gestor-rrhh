@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Briefcase, CreditCard, Eye, EyeOff, User } from "lucide-react";
 import { crearUsuario, type CrearUsuarioState } from "../../actions/admin-actions";
 
@@ -30,6 +31,7 @@ export default function CreateUserForm({
   onCancel,
 }: CreateUserFormProps) {
   const [state, formAction, isPending] = useActionState(crearUsuario, initialState);
+  const router = useRouter();
   const [rol, setRol] = useState<"EMPLEADO" | "GERENTE">("EMPLEADO");
   const [empresaId, setEmpresaId] = useState("");
   const [horasSemanales, setHorasSemanales] = useState("40");
@@ -43,8 +45,9 @@ export default function CreateUserForm({
       setEmpresaId("");
       setHorasSemanales("40");
       setShowPassword(false);
+      router.refresh();
     }
-  }, [state.status]);
+  }, [state.status, router]);
 
   const departamentosFiltrados = useMemo(() => {
     if (!empresaId) {

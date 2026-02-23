@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   asignarTarjetaUsuario,
   type AsignarTarjetaState,
@@ -21,14 +22,16 @@ export default function NfcAssignForm({
     asignarTarjetaUsuario,
     initialState,
   );
+  const router = useRouter();
   const [uid, setUid] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.status === "success") {
       setUid("");
+      router.refresh();
     }
-  }, [state.status]);
+  }, [state.status, router]);
 
   const statusClass =
     state.status === "error"

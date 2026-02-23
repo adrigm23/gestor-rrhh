@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
 import { toggleFichaje } from "../actions/fichaje-actions";
 
@@ -29,6 +29,30 @@ export default function FichajeGeoForm({
   const skipRef = useRef(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [permissionState, setPermissionState] =
+    useState<PermissionState | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!("permissions" in navigator) || !navigator.permissions) return;
+    let active = true;
+    navigator.permissions
+      .query({ name: "geolocation" })
+      .then((status) => {
+        if (!active) return;
+        setPermissionState(status.state);
+        const onChange = () => setPermissionState(status.state);
+        status.addEventListener("change", onChange);
+        return () => status.removeEventListener("change", onChange);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPermissionState(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [enabled]);
 
   const submitForm = () => {
     skipRef.current = true;
@@ -129,6 +153,17 @@ export default function FichajeGeoForm({
       {enabled && (
         <p className="mt-3 text-[11px] text-[color:var(--text-muted)]">
           Se solicitara tu ubicacion al registrar entrada o salida.
+        </p>
+      )}
+      {!enabled && (
+        <p className="mt-3 text-[11px] text-[color:var(--text-muted)]">
+          Geolocalizacion desactivada para tu empresa.
+        </p>
+      )}
+      {enabled && permissionState === "denied" && !geoError && (
+        <p className="mt-2 text-xs text-amber-600">
+          Permiso de ubicacion bloqueado en el navegador. Activalo y
+          reintenta.
         </p>
       )}
       {enabled && geoError && (
