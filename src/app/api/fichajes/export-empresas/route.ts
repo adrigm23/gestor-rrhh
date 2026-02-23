@@ -17,9 +17,12 @@ const toTipoFichaje = (value: string) => {
 };
 
 const escapeCsv = (value: string) => {
-  const needsEscape = value.includes(",") || value.includes("\"") || value.includes("\n");
-  if (!needsEscape) return value;
-  return `"${value.replace(/"/g, "\"\"")}"`;
+  const raw = String(value);
+  const guarded = /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  const needsEscape =
+    guarded.includes(",") || guarded.includes("\"") || guarded.includes("\n");
+  if (!needsEscape) return guarded;
+  return `"${guarded.replace(/"/g, "\"\"")}"`;
 };
 
 const formatTotalMinutes = (totalMinutes: number) => {

@@ -25,9 +25,18 @@ export type FichajeResumen = {
   salida: string | null;
 };
 
+export type FichajeHistorial = {
+  id: string;
+  entrada: string;
+  salida: string | null;
+  tipo: "JORNADA" | "PAUSA_COMIDA" | "DESCANSO" | "MEDICO";
+  editado: boolean;
+};
+
 type CalendarioEmpleadoProps = {
   solicitudes: SolicitudResumen[];
   fichajes: FichajeResumen[];
+  historial: FichajeHistorial[];
   jornadaEntradaIso?: string | null;
   pauseStartIso?: string | null;
   pauseAccumulatedMs?: number;
@@ -128,9 +137,33 @@ const formatTime = (date: Date) =>
     minute: "2-digit",
   }).format(date);
 
+const formatDuration = (entrada: Date, salida?: Date | null) => {
+  if (!salida) return "En curso";
+  const diffMs = Math.max(0, salida.getTime() - entrada.getTime());
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const padded = (value: number) => value.toString().padStart(2, "0");
+  return `${padded(hours)}:${padded(minutes)} Hrs`;
+};
+
+const formatTipo = (tipo: FichajeHistorial["tipo"]) => {
+  switch (tipo) {
+    case "PAUSA_COMIDA":
+      return "Pausa comida";
+    case "DESCANSO":
+      return "Descanso";
+    case "MEDICO":
+      return "Medico";
+    default:
+      return "Jornada";
+  }
+};
+
 export default function CalendarioEmpleado({
   solicitudes,
   fichajes,
+  historial,
   jornadaEntradaIso = null,
   pauseStartIso = null,
   pauseAccumulatedMs = 0,
@@ -143,7 +176,7 @@ export default function CalendarioEmpleado({
   const [rangeEnd, setRangeEnd] = useState<FechaSeleccion>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<"mes" | "semana" | "dia">("mes");
-  const vacacionesAnchorId = "solicitar-vacaciones";
+  const vacacionesAnchorId = "solicitudes";
 
   const [vacState, vacAction] = useActionState(
     solicitarVacaciones,
@@ -855,6 +888,83 @@ export default function CalendarioEmpleado({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section
+        id="historial"
+        className="rounded-[28px] border border-[color:var(--card-border)] bg-[color:var(--card)] p-8 shadow-[var(--shadow-card)]"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
+              Historico de fichajes
+            </h3>
+            <p className="text-sm text-[color:var(--text-muted)]">
+              Ultimos movimientos registrados.
+            </p>
+          </div>
+          <span className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] px-3 py-1 text-xs text-[color:var(--text-muted)]">
+            {historial.length} registros
+          </span>
+        </div>
+
+        {historial.length === 0 ? (
+          <p className="mt-4 text-sm text-[color:var(--text-muted)]">
+            No hay fichajes recientes.
+          </p>
+        ) : (
+          <div className="mt-6 overflow-x-auto rounded-2xl border border-[color:var(--card-border)]">
+            <table className="min-w-full text-sm">
+              <thead className="bg-[color:var(--surface-muted)] text-xs uppercase tracking-wider text-[color:var(--text-muted)]">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">Fecha</th>
+                  <th className="px-4 py-3 text-left font-semibold">Entrada</th>
+                  <th className="px-4 py-3 text-left font-semibold">Salida</th>
+                  <th className="px-4 py-3 text-left font-semibold">Total</th>
+                  <th className="px-4 py-3 text-left font-semibold">Tipo</th>
+                  <th className="px-4 py-3 text-left font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--card-border)]">
+                {historial.map((item) => {
+                  const entradaDate = new Date(item.entrada);
+                  const salidaDate = item.salida ? new Date(item.salida) : null;
+                  return (
+                    <tr
+                      key={item.id}
+                      className="text-[color:var(--text-secondary)]"
+                    >
+                      <td className="px-4 py-3">
+                        {entradaDate.toLocaleDateString("es-ES")}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatTime(entradaDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {salidaDate ? formatTime(salidaDate) : "--"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatDuration(entradaDate, salidaDate)}
+                      </td>
+                      <td className="px-4 py-3">{formatTipo(item.tipo)}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            item.salida
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {item.salida ? "Cerrado" : "Abierto"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

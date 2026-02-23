@@ -25,6 +25,11 @@ const getAppUrl = () => {
     return direct.replace(/\/$/, "");
   }
 
+  const nextAuth = process.env.NEXTAUTH_URL?.trim();
+  if (nextAuth) {
+    return nextAuth.replace(/\/$/, "");
+  }
+
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) {
     return `https://${vercel.replace(/\/$/, "")}`;
@@ -34,7 +39,7 @@ const getAppUrl = () => {
     return "http://localhost:3000";
   }
 
-  throw new Error("APP_URL no configurado");
+  return null;
 };
 
 export async function solicitarResetPassword(
@@ -87,7 +92,16 @@ export async function solicitarResetPassword(
       },
     });
 
-    const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
+    const appUrl = getAppUrl();
+    if (!appUrl) {
+      console.error("APP_URL/NEXTAUTH_URL no configurado para reset password.");
+      return {
+        ...emptySuccess,
+        message: "Si el correo existe, recibiras un enlace para restablecer.",
+      };
+    }
+
+    const resetUrl = `${appUrl}/reset-password?token=${token}`;
     await sendPasswordResetEmail({
       to: usuario.email,
       name: usuario.nombre,

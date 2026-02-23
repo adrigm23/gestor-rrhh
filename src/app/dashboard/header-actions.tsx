@@ -50,7 +50,7 @@ export default function HeaderActions({
         {open && (
           <div
             id="notificaciones-panel"
-            className="absolute right-0 top-12 w-72 rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--card)] p-4 text-xs text-[color:var(--text-secondary)] shadow-xl"
+            className="fixed left-1/2 top-16 z-30 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--card)] p-4 text-xs text-[color:var(--text-secondary)] shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-72 sm:translate-x-0"
             role="dialog"
             aria-label="Notificaciones"
           >

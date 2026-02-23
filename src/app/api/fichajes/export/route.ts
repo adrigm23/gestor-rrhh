@@ -40,9 +40,12 @@ const formatDuration = (entrada: Date, salida?: Date | null) => {
 };
 
 const escapeCsv = (value: string) => {
-  const needsEscape = value.includes(",") || value.includes("\"") || value.includes("\n");
-  if (!needsEscape) return value;
-  return `"${value.replace(/"/g, "\"\"")}"`;
+  const raw = String(value);
+  const guarded = /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  const needsEscape =
+    guarded.includes(",") || guarded.includes("\"") || guarded.includes("\n");
+  if (!needsEscape) return guarded;
+  return `"${guarded.replace(/"/g, "\"\"")}"`;
 };
 
 export async function GET(request: Request) {

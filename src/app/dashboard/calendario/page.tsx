@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import CalendarioEmpleado, {
+  type FichajeHistorial,
   type SolicitudResumen,
 } from "./calendar-employee";
 
@@ -17,7 +18,7 @@ export default async function CalendarioPage() {
   const startRange = new Date(today.getFullYear(), today.getMonth() - 3, 1);
   const endRange = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59, 999);
 
-  const [solicitudes, fichajes, jornadaActiva] = userId
+  const [solicitudes, fichajes, historial, jornadaActiva] = userId
     ? await Promise.all([
         prisma.solicitud.findMany({
           where: {
@@ -42,12 +43,26 @@ export default async function CalendarioPage() {
           },
           select: { entrada: true, salida: true },
         }),
+        prisma.fichaje.findMany({
+          where: {
+            usuarioId: userId,
+          },
+          select: {
+            id: true,
+            entrada: true,
+            salida: true,
+            tipo: true,
+            editado: true,
+          },
+          orderBy: { entrada: "desc" },
+          take: 30,
+        }),
         prisma.fichaje.findFirst({
           where: { usuarioId: userId, salida: null, tipo: "JORNADA" },
           orderBy: { entrada: "desc" },
         }),
       ])
-    : [[], [], null];
+    : [[], [], [], null];
 
   const pausaActiva =
     userId && jornadaActiva
@@ -96,10 +111,19 @@ export default async function CalendarioPage() {
     salida: item.salida ? item.salida.toISOString() : null,
   }));
 
+  const historialResumen: FichajeHistorial[] = historial.map((item) => ({
+    id: item.id,
+    entrada: item.entrada.toISOString(),
+    salida: item.salida ? item.salida.toISOString() : null,
+    tipo: item.tipo,
+    editado: item.editado,
+  }));
+
   return (
     <CalendarioEmpleado
       solicitudes={resumen}
       fichajes={fichajesResumen}
+      historial={historialResumen}
       jornadaEntradaIso={jornadaActiva?.entrada.toISOString() ?? null}
       pauseStartIso={pausaActiva?.entrada.toISOString() ?? null}
       pauseAccumulatedMs={pauseAccumulatedMs}
