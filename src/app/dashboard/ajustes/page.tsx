@@ -14,7 +14,14 @@ export default async function AjustesPage() {
   const usuario = await prisma.usuario.findUnique({
     where: { id: session.user?.id ?? "" },
     include: {
-      empresa: { select: { nombre: true, id: true, pausaCuentaComoTrabajo: true } },
+      empresa: {
+        select: {
+          nombre: true,
+          id: true,
+          pausaCuentaComoTrabajo: true,
+          geolocalizacionFichaje: true,
+        },
+      },
       departamento: { select: { nombre: true } },
     },
   });
@@ -91,12 +98,14 @@ export default async function AjustesPage() {
             Configuracion de empresa
           </h3>
           <p className="mt-1 text-sm text-[color:var(--text-muted)]">
-            Define si la pausa cuenta como tiempo trabajado para tu empresa.
+            Define si la pausa cuenta como tiempo trabajado y si la geolocalizacion
+            esta activa para fichajes.
           </p>
           <div className="mt-6 max-w-sm">
             <EmpresaConfigForm
               empresaId={usuario.empresa.id}
               pausaCuentaComoTrabajo={usuario.empresa.pausaCuentaComoTrabajo}
+              geolocalizacionFichaje={usuario.empresa.geolocalizacionFichaje}
             />
           </div>
         </section>
