@@ -41,12 +41,16 @@ jobs:
 
       - name: Resolver tipo de backup
         id: vars
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_BACKUP_TYPE: ${{ github.event.inputs.backup_type }}
         run: |
           set -euo pipefail
           TYPE="daily"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TYPE="${{ github.event.inputs.backup_type }}"
-          elif [ "${{ github.event.schedule }}" = "0 2 1 * *" ]; then
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            TYPE="${INPUT_BACKUP_TYPE}"
+          elif [ "${EVENT_SCHEDULE}" = "0 2 1 * *" ]; then
             TYPE="monthly"
           fi
           echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
