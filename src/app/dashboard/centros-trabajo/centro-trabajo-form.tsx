@@ -82,6 +82,17 @@ export default function CentroTrabajoForm({
             placeholder="Ej: Planta Norte"
           />
         </div>
+        <div className="space-y-2 md:col-span-2">
+          <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+            Direccion (opcional)
+          </label>
+          <input
+            name="direccion"
+            type="text"
+            className="w-full rounded-2xl border border-[color:var(--card-border)] bg-transparent px-4 py-3 text-sm text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
+            placeholder="Ej: Calle Mayor 1, Madrid"
+          />
+        </div>
         {role === "ADMIN_SISTEMA" && (
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[color:var(--text-secondary)]">

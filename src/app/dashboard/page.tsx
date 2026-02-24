@@ -5,8 +5,6 @@ import { getApprovedLeaveType } from "../lib/vacaciones";
 import { togglePausa } from "../actions/fichaje-actions";
 import {
   Play,
-  Bell,
-  Settings,
   CalendarDays,
   AlertTriangle,
   MapPin,
@@ -15,6 +13,7 @@ import {
 import FichajeTimer from "./fichaje-timer";
 import FichajeGeoForm from "./fichaje-geo-form";
 import PausaTimer from "./pausa-timer";
+import DashboardQuickActions from "./dashboard-quick-actions";
 import SolicitudesFichajeEmpleado, {
   type SolicitudFichajeEmpleado,
 } from "./solicitudes-fichaje-empleado";
@@ -168,7 +167,7 @@ export default async function DashboardPage() {
           departamento: {
             select: {
               nombre: true,
-              centroTrabajo: { select: { nombre: true } },
+              centroTrabajo: { select: { nombre: true, direccion: true } },
             },
           },
         },
@@ -178,6 +177,15 @@ export default async function DashboardPage() {
   const empresaNombre = userMeta?.empresa?.nombre ?? "Empresa";
   const centroTrabajoNombre =
     userMeta?.departamento?.centroTrabajo?.nombre ?? "Oficina central";
+  const centroTrabajoDireccion =
+    userMeta?.departamento?.centroTrabajo?.direccion ?? "";
+  const mapQuery =
+    centroTrabajoDireccion || `${centroTrabajoNombre} ${empresaNombre}`;
+  const mapHref = mapQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        mapQuery,
+      )}`
+    : null;
   const pausaCuenta = userMeta?.empresa?.pausaCuentaComoTrabajo ?? true;
   const geoEnabled = userMeta?.empresa?.geolocalizacionFichaje ?? false;
 
@@ -333,22 +341,7 @@ export default async function DashboardPage() {
             <span>{fechaLarga}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)] shadow-sm transition hover:text-[color:var(--text-primary)]"
-            aria-label="Notificaciones"
-          >
-            <Bell size={18} />
-          </button>
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)] shadow-sm transition hover:text-[color:var(--text-primary)]"
-            aria-label="Ajustes"
-          >
-            <Settings size={18} />
-          </button>
-        </div>
+        <DashboardQuickActions />
       </header>
 
       <section
@@ -619,8 +612,18 @@ export default async function DashboardPage() {
                 {centroTrabajoNombre}
               </p>
               <p className="text-xs text-[color:var(--text-muted)]">
-                {empresaNombre}
+                {centroTrabajoDireccion || empresaNombre}
               </p>
+              {mapHref && (
+                <a
+                  href={mapHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                >
+                  Abrir en mapas
+                </a>
+              )}
             </div>
           </section>
 

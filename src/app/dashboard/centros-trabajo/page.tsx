@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import CentroTrabajoForm from "./centro-trabajo-form";
+import CentroTrabajoDireccionForm from "./centro-trabajo-direccion-form";
 
 export default async function CentrosTrabajoPage() {
   const session = await auth();
@@ -94,6 +95,9 @@ export default async function CentrosTrabajoPage() {
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">Nombre</th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      Direccion
+                    </th>
                     <th className="px-4 py-3 text-left font-semibold">Gerente</th>
                     {role === "ADMIN_SISTEMA" && (
                       <th className="px-4 py-3 text-left font-semibold">Empresa</th>
@@ -106,6 +110,12 @@ export default async function CentrosTrabajoPage() {
                     <tr key={centro.id} className="text-slate-600">
                       <td className="px-4 py-3 font-semibold text-slate-900">
                         {centro.nombre}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500">
+                        <CentroTrabajoDireccionForm
+                          centroId={centro.id}
+                          direccionActual={centro.direccion}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         {centro.gerente?.nombre ?? "Sin gerente"}

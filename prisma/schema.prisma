@@ -176,6 +176,7 @@ model Departamento {
 model CentroTrabajo {
   id         String        @id @default(cuid())
   nombre     String
+  direccion  String?
   empresaId  String
   empresa    Empresa       @relation(fields: [empresaId], references: [id])
   gerenteId  String?
