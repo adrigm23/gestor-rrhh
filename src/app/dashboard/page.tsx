@@ -175,10 +175,28 @@ export default async function DashboardPage() {
     : null;
 
   const empresaNombre = userMeta?.empresa?.nombre ?? "Empresa";
-  const centroTrabajoNombre =
-    userMeta?.departamento?.centroTrabajo?.nombre ?? "Oficina central";
-  const centroTrabajoDireccion =
-    userMeta?.departamento?.centroTrabajo?.direccion ?? "";
+  const empresaId = session.user?.empresaId ?? null;
+  let centroTrabajo =
+    userMeta?.departamento?.centroTrabajo ?? null;
+  if (!centroTrabajo && empresaId) {
+    if (role === "GERENTE") {
+      centroTrabajo = await prisma.centroTrabajo.findFirst({
+        where: { gerenteId: userId ?? undefined },
+        orderBy: { createdAt: "desc" },
+        select: { nombre: true, direccion: true },
+      });
+    }
+    if (!centroTrabajo) {
+      centroTrabajo = await prisma.centroTrabajo.findFirst({
+        where: { empresaId },
+        orderBy: { createdAt: "desc" },
+        select: { nombre: true, direccion: true },
+      });
+    }
+  }
+
+  const centroTrabajoNombre = centroTrabajo?.nombre ?? "Oficina central";
+  const centroTrabajoDireccion = centroTrabajo?.direccion ?? "";
   const mapQuery =
     centroTrabajoDireccion || `${centroTrabajoNombre} ${empresaNombre}`;
   const mapHref = mapQuery
