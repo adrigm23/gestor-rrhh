@@ -216,5 +216,6 @@ export async function actualizarCentroTrabajoDireccion(
   });
 
   revalidatePath("/dashboard/centros-trabajo");
+  revalidatePath("/dashboard");
   return { ...emptySuccess, message: "Direccion actualizada." };
 }
