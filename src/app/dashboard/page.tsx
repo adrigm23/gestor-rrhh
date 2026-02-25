@@ -13,6 +13,7 @@ import {
 import FichajeTimer from "./fichaje-timer";
 import FichajeGeoForm from "./fichaje-geo-form";
 import PausaTimer from "./pausa-timer";
+import ConectadoDesde from "./conectado-desde";
 import DashboardQuickActions from "./dashboard-quick-actions";
 import SolicitudesFichajeEmpleado, {
   type SolicitudFichajeEmpleado,
@@ -278,13 +279,6 @@ export default async function DashboardPage() {
     : [];
 
   const displayName = session.user?.name ?? session.user?.email ?? "Usuario";
-  const conectadoDesde = jornadaActiva
-    ? jornadaActiva.entrada.toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null;
-
   const accionLabel = jornadaActiva ? "Finalizar Jornada" : "Registrar Entrada";
   const accionHelper = jornadaActiva ? "Registrar Salida" : "Iniciar Jornada";
   const pausaLabel = pausaActiva ? "Reanudar pausa" : "Pausa Comida";
@@ -305,10 +299,6 @@ export default async function DashboardPage() {
     ? "bg-amber-100 text-amber-700"
     : "bg-slate-100 text-slate-600";
 
-  const conectadoLabel =
-    jornadaActiva && conectadoDesde
-      ? `Conectado desde ${conectadoDesde}`
-      : "Sin jornada activa";
   const conectadoTone = jornadaActiva
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : "border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]";
@@ -416,7 +406,7 @@ export default async function DashboardPage() {
                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${conectadoTone}`}
               >
                 <span className={`h-2 w-2 rounded-full ${conectadoDot}`} />
-                {conectadoLabel}
+                <ConectadoDesde startIso={entradaIso} />
               </span>
             </div>
 

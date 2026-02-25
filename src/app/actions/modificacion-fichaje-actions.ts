@@ -12,9 +12,40 @@ export type ModificacionFichajeState = {
 const emptySuccess: ModificacionFichajeState = { status: "success" };
 const emptyError: ModificacionFichajeState = { status: "error" };
 
-const parseDateTime = (value?: string | null) => {
+const parseDateTime = (
+  value?: string | null,
+  tzOffsetMinutes?: number | null,
+) => {
   if (!value) return null;
-  const date = new Date(value);
+  const raw = value.toString().trim();
+  if (!raw) return null;
+
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(raw);
+
+  if (match) {
+    const [, y, m, d, hh, mm, ss] = match;
+    if (typeof tzOffsetMinutes === "number" && !Number.isNaN(tzOffsetMinutes)) {
+      const utcMs =
+        Date.UTC(
+          Number(y),
+          Number(m) - 1,
+          Number(d),
+          Number(hh),
+          Number(mm),
+          Number(ss ?? "0"),
+        ) +
+        tzOffsetMinutes * 60_000;
+      return new Date(utcMs);
+    }
+  }
+
+  const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
@@ -91,14 +122,17 @@ export async function crearSolicitudModificacion(
   const fichajeId = formData.get("fichajeId")?.toString() ?? "";
   const entradaValue = formData.get("entrada")?.toString() ?? "";
   const salidaValue = formData.get("salida")?.toString() ?? "";
+  const tzOffsetValue = formData.get("tzOffset")?.toString() ?? "";
+  const tzOffsetMinutes =
+    tzOffsetValue === "" ? null : Number(tzOffsetValue);
   const motivo = normalizeText(formData.get("motivo")?.toString() ?? "");
 
   if (!empleadoId) {
     return { ...emptyError, message: "Selecciona un empleado." };
   }
 
-  const entradaPropuesta = parseDateTime(entradaValue);
-  const salidaPropuesta = parseDateTime(salidaValue);
+  const entradaPropuesta = parseDateTime(entradaValue, tzOffsetMinutes);
+  const salidaPropuesta = parseDateTime(salidaValue, tzOffsetMinutes);
 
   if (!entradaPropuesta && !salidaPropuesta) {
     return { ...emptyError, message: "Indica al menos una hora." };

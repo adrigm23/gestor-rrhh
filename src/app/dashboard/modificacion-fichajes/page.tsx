@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import DateTimeLocal from "../date-time-local";
 import ModificacionFichajeForm from "./modificacion-fichaje-form";
 
 export default async function ModificacionFichajesPage() {
@@ -130,14 +131,24 @@ export default async function ModificacionFichajesPage() {
                         {solicitud.motivo ?? "Sin motivo"}
                       </td>
                       <td className="px-4 py-3">
-                        {solicitud.entradaPropuesta
-                          ? solicitud.entradaPropuesta.toLocaleString("es-ES")
-                          : "Sin cambio"}
+                        <DateTimeLocal
+                          value={
+                            solicitud.entradaPropuesta
+                              ? solicitud.entradaPropuesta.toISOString()
+                              : null
+                          }
+                          fallback="Sin cambio"
+                        />
                       </td>
                       <td className="px-4 py-3">
-                        {solicitud.salidaPropuesta
-                          ? solicitud.salidaPropuesta.toLocaleString("es-ES")
-                          : "Sin cambio"}
+                        <DateTimeLocal
+                          value={
+                            solicitud.salidaPropuesta
+                              ? solicitud.salidaPropuesta.toISOString()
+                              : null
+                          }
+                          fallback="Sin cambio"
+                        />
                       </td>
                     </tr>
                   ))}

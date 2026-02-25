@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   crearSolicitudModificacion,
   type ModificacionFichajeState,
@@ -39,10 +39,15 @@ export default function ModificacionFichajeForm({
   fichajes,
 }: ModificacionFichajeFormProps) {
   const [empleadoId, setEmpleadoId] = useState("");
+  const [tzOffset, setTzOffset] = useState("");
   const [state, action, pending] = useActionState(
     crearSolicitudModificacion,
     initialState,
   );
+
+  useEffect(() => {
+    setTzOffset(String(new Date().getTimezoneOffset()));
+  }, []);
   const fichajesFiltrados = useMemo(() => {
     if (!empleadoId) return [];
     return fichajes.filter((fichaje) => fichaje.empleadoId === empleadoId);
@@ -50,6 +55,7 @@ export default function ModificacionFichajeForm({
 
   return (
     <form action={action} className="space-y-6">
+      <input type="hidden" name="tzOffset" value={tzOffset} />
       <div>
         <h3 className="text-lg font-semibold text-slate-900">
           Enviar solicitud de modificacion
