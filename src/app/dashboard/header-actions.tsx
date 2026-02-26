@@ -32,21 +32,20 @@ export default function HeaderActions({
   }, [open]);
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-4 text-sm text-[color:var(--text-secondary)] sm:px-6 md:justify-end md:px-10 md:py-5">
-      <span className="truncate font-medium text-[color:var(--text-primary)] md:hidden">
+    <div className="flex items-center justify-between gap-4 px-4 py-4 text-sm text-[color:var(--text-secondary)] sm:px-6 md:justify-end md:px-10 md:py-6">
+      <span className="truncate font-medium text-[color:var(--text-primary)]">
         {userName}
       </span>
       <div className="relative" ref={popoverRef}>
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          className="relative rounded-full border border-[#2c405f] bg-[#0f1b34] p-2 text-[#a7bad9] transition hover:text-[#eaf2ff]"
+          className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
           aria-label="Notificaciones"
           aria-expanded={open}
           aria-controls="notificaciones-panel"
         >
           <Bell size={18} />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400" />
         </button>
         {open && (
           <div
@@ -68,7 +67,7 @@ export default function HeaderActions({
       <button
         type="button"
         onClick={onMenuClick}
-        className="force-mobile-inline-flex rounded-full border border-[#2c405f] bg-[#0f1b34] p-2 text-[#a7bad9] transition hover:text-[#eaf2ff] md:hidden"
+        className="force-mobile-inline-flex rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)] md:hidden"
         aria-label="Menu"
       >
         <Menu size={18} />
@@ -76,10 +75,10 @@ export default function HeaderActions({
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/login" })}
-        className="flex items-center gap-2 border-l border-[#2c405f] pl-4 text-sm font-semibold uppercase tracking-[0.06em] text-[#d9e7ff] transition hover:text-white sm:pl-6"
+        className="flex items-center gap-2 rounded-full bg-[color:var(--sidebar-bg)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 sm:px-4"
       >
         <LogOut size={16} />
-        <span>Cerrar sesion</span>
+        <span className="hidden sm:inline">Cerrar sesion</span>
       </button>
     </div>
   );
