@@ -52,7 +52,7 @@ export default function CreateUserPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-200/60 transition hover:bg-emerald-700"
+        className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 px-6 py-3 text-base font-medium text-white shadow-[0_10px_26px_rgba(20,184,166,0.35)] transition hover:brightness-110"
       >
         <Plus size={16} />
         Crear usuario
