@@ -79,6 +79,7 @@ export default async function EmpleadosPage({
       ? {
           OR: [
             { nombre: { contains: query, mode: "insensitive" } },
+            { dni: { contains: query, mode: "insensitive" } },
             { email: { contains: query, mode: "insensitive" } },
             ...(nfcHash ? [{ nfcUidHash: nfcHash }] : []),
           ],
@@ -113,6 +114,7 @@ export default async function EmpleadosPage({
     select: {
       id: true,
       nombre: true,
+      dni: true,
       email: true,
       rol: true,
       activo: true,

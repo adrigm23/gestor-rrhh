@@ -47,6 +47,11 @@ export type UpdateEmailState = {
   message?: string;
 };
 
+export type UpdateDniState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+};
+
 const emptySuccess: CrearUsuarioState = { status: "success" };
 const emptyError: CrearUsuarioState = { status: "error" };
 const emptyAssignSuccess: AsignarTarjetaState = { status: "success" };
@@ -63,10 +68,36 @@ const emptyEstadoSuccess: EstadoUsuarioState = { status: "success" };
 const emptyEstadoError: EstadoUsuarioState = { status: "error" };
 const emptyUpdateSuccess: UpdateEmailState = { status: "success" };
 const emptyUpdateError: UpdateEmailState = { status: "error" };
+const emptyUpdateDniSuccess: UpdateDniState = { status: "success" };
+const emptyUpdateDniError: UpdateDniState = { status: "error" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeNombre = (value: string) => value.trim().replace(/\s+/g, " ");
+const normalizeDni = (value: string) =>
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[-\s]/g, "");
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const dniRegex = /^(\d{8}|[XYZ]\d{7})[A-Z]$/;
+const DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
+
+const isValidDni = (dni: string) => {
+  if (!dniRegex.test(dni)) return false;
+  const prefix = dni[0];
+  const numericPartRaw =
+    prefix === "X"
+      ? `0${dni.slice(1, 8)}`
+      : prefix === "Y"
+        ? `1${dni.slice(1, 8)}`
+        : prefix === "Z"
+          ? `2${dni.slice(1, 8)}`
+          : dni.slice(0, 8);
+  const number = Number.parseInt(numericPartRaw, 10);
+  if (!Number.isFinite(number)) return false;
+  const expectedLetter = DNI_LETTERS[number % 23];
+  return expectedLetter === dni.slice(-1);
+};
 
 export async function crearUsuario(
   _prevState: CrearUsuarioState,
@@ -88,6 +119,7 @@ export async function crearUsuario(
   }
 
   const nombre = normalizeNombre(formData.get("nombre")?.toString() ?? "");
+  const dni = normalizeDni(formData.get("dni")?.toString() ?? "");
   const email = normalizeEmail(formData.get("email")?.toString() ?? "");
   const password = formData.get("password")?.toString() ?? "";
   const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
@@ -96,12 +128,16 @@ export async function crearUsuario(
   const rolRaw = formData.get("rol")?.toString().trim().toUpperCase() ?? "";
   const horasSemanalesRaw = formData.get("horasSemanales")?.toString() ?? "";
 
-  if (!nombre || !email || !password) {
+  if (!nombre || !dni || !email || !password) {
     return { ...emptyError, message: "Completa todos los campos obligatorios." };
   }
 
   if (!emailRegex.test(email)) {
     return { ...emptyError, message: "Email invalido." };
+  }
+
+  if (!isValidDni(dni)) {
+    return { ...emptyError, message: "DNI/NIE invalido." };
   }
 
   if (password.length < 8) {
@@ -159,6 +195,15 @@ export async function crearUsuario(
       return { ...emptyError, message: "Ese email ya esta en uso." };
     }
 
+    const existenteDni = await prisma.usuario.findUnique({
+      where: { dni },
+      select: { id: true },
+    });
+
+    if (existenteDni) {
+      return { ...emptyError, message: "Ese DNI/NIE ya esta en uso." };
+    }
+
     const hashedPassword = await hashPassword(password);
     const departamentoFinal = rol === "EMPLEADO" ? departamentoId : null;
 
@@ -177,6 +222,7 @@ export async function crearUsuario(
       const usuario = await tx.usuario.create({
         data: {
           nombre,
+          dni,
           email,
           password: hashedPassword,
           passwordMustChange: true,
@@ -776,4 +822,65 @@ export async function actualizarEmailUsuario(
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyUpdateSuccess, message: "Email actualizado." };
+}
+
+export async function actualizarDniUsuario(
+  _prevState: UpdateDniState,
+  formData: FormData,
+): Promise<UpdateDniState> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { ...emptyUpdateDniError, message: "No autorizado." };
+  }
+
+  const creador = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  if (!creador || creador.rol !== "ADMIN_SISTEMA") {
+    return { ...emptyUpdateDniError, message: "No autorizado." };
+  }
+
+  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const dni = normalizeDni(formData.get("dni")?.toString() ?? "");
+
+  if (!usuarioId || !dni) {
+    return { ...emptyUpdateDniError, message: "Completa todos los campos." };
+  }
+
+  if (!isValidDni(dni)) {
+    return { ...emptyUpdateDniError, message: "DNI/NIE invalido." };
+  }
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { id: true, rol: true },
+  });
+
+  if (!usuario) {
+    return { ...emptyUpdateDniError, message: "Usuario no encontrado." };
+  }
+
+  if (usuario.rol === "ADMIN_SISTEMA") {
+    return { ...emptyUpdateDniError, message: "No se permite en este usuario." };
+  }
+
+  const existente = await prisma.usuario.findUnique({
+    where: { dni },
+    select: { id: true },
+  });
+
+  if (existente && existente.id !== usuarioId) {
+    return { ...emptyUpdateDniError, message: "Ese DNI/NIE ya esta en uso." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: { dni },
+  });
+
+  revalidatePath("/dashboard/empleados");
+  return { ...emptyUpdateDniSuccess, message: "DNI actualizado." };
 }

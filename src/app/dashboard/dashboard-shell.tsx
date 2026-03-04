@@ -71,11 +71,11 @@ export default function DashboardShell({
             />
           </header>
 
-          <main className="flex-1 overflow-x-hidden px-4 pb-24 pt-6 sm:px-6 md:px-10 md:pb-10">
+          <main className="flex-1 overflow-x-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-6 sm:px-6 md:px-10 md:pb-10">
             {children}
           </main>
 
-          <footer className="pb-24 text-center text-xs text-[color:var(--text-muted)] md:pb-8">
+          <footer className="pb-[calc(env(safe-area-inset-bottom)+5.5rem)] text-center text-xs text-[color:var(--text-muted)] md:pb-8">
             <p>(c) 2026 - mdmm - suma3 consultores - Politica de Privacidad - Aviso Legal</p>
             <p className="mt-1 text-[color:var(--text-muted)]/70">v1.7.7</p>
           </footer>

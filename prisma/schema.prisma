@@ -25,6 +25,7 @@ model Empresa {
 model Usuario {
   id         String    @id @default(cuid())
   nombre     String
+  dni        String?   @unique
   email      String    @unique
   password   String
   passwordMustChange Boolean @default(false)
@@ -115,6 +116,15 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+}
+
+model LoginThrottle {
+  key            String   @id
+  attempts       Int      @default(0)
+  firstAttemptAt DateTime?
+  blockedUntil   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model JustificanteAcceso {

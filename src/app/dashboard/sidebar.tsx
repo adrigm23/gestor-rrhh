@@ -105,6 +105,9 @@ export default function Sidebar({
     : !isEmpleado
       ? [{ label: "Ajustes", icon: Settings, href: "/dashboard/ajustes" }]
       : [];
+  const mobileColumns = !isEmpleado
+    ? navigationPrimary.length + 1
+    : navigationPrimary.length;
 
   const renderLink = (item: NavItem) => {
     const Icon = item.icon;
@@ -142,12 +145,12 @@ export default function Sidebar({
         key={item.label}
         href={item.href}
         onClick={onClose}
-        className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-semibold transition ${
+        className={`flex w-full min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition ${
           active ? "text-sky-600" : "text-[color:var(--text-muted)]"
         }`}
       >
         <Icon size={18} />
-        <span>{item.label}</span>
+        <span className="truncate">{item.label}</span>
       </Link>
     );
   };
@@ -371,18 +374,21 @@ export default function Sidebar({
         </aside>
       </div>
 
-      <nav className="force-mobile-block fixed bottom-0 left-0 right-0 z-30 border-t border-[color:var(--card-border)] bg-[color:var(--card)] px-4 py-2 text-[color:var(--text-secondary)] backdrop-blur md:hidden">
-        <div className="flex items-center justify-between">
+      <nav className="force-mobile-block fixed bottom-0 left-0 right-0 z-30 border-t border-[color:var(--card-border)] bg-[color:var(--card)] px-2 pb-[calc(env(safe-area-inset-bottom)+0.4rem)] pt-2 text-[color:var(--text-secondary)] backdrop-blur md:hidden">
+        <div
+          className="grid items-start gap-1"
+          style={{ gridTemplateColumns: `repeat(${mobileColumns}, minmax(0, 1fr))` }}
+        >
           {navigationPrimary.map(renderMobileLink)}
           {!isEmpleado && (
             <button
               type="button"
               onClick={onOpen}
-              className="flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-semibold text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+              className="flex w-full min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
               aria-label="Menu"
             >
               <Menu size={20} />
-              <span>Menu</span>
+              <span className="truncate">Menu</span>
             </button>
           )}
         </div>

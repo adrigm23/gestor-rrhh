@@ -1,0 +1,10 @@
+CREATE TABLE "LoginThrottle" (
+  "key" TEXT NOT NULL,
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "firstAttemptAt" TIMESTAMP(3),
+  "blockedUntil" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "LoginThrottle_pkey" PRIMARY KEY ("key")
+);

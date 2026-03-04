@@ -91,7 +91,7 @@ export default function CreateUserForm({
           <User size={14} />
           Informacion personal
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
               Nombre completo
@@ -114,6 +114,21 @@ export default function CreateUserForm({
               required
               className={inputClass}
               placeholder="ana@empresa.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[color:var(--text-secondary)]">
+              DNI/NIE
+            </label>
+            <input
+              name="dni"
+              type="text"
+              required
+              pattern="^([XYZxyz]\\d{7}|\\d{8})[A-Za-z]$"
+              title="Formato valido: 12345678Z o X1234567L"
+              autoCapitalize="characters"
+              className={inputClass}
+              placeholder="Ej: 12345678Z"
             />
           </div>
         </div>

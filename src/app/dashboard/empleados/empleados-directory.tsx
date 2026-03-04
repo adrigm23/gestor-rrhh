@@ -18,6 +18,7 @@ import NfcAssignForm from "./nfc-assign-form";
 import UserStatusForm from "./user-status-form";
 import EmailUpdateForm from "./email-update-form";
 import UserDeleteForm from "./user-delete-form";
+import DniUpdateForm from "./dni-update-form";
 
 type EmpresaOption = {
   id: string;
@@ -34,6 +35,7 @@ type DepartamentoOption = {
 type UsuarioItem = {
   id: string;
   nombre: string;
+  dni: string | null;
   email: string;
   rol: string;
   activo: boolean;
@@ -283,7 +285,7 @@ export default function EmpleadosDirectory({
                   ? "w-full min-w-0 bg-transparent text-[15px] text-[#d7e6ff] placeholder:text-[#6f85aa] outline-none"
                   : "w-full bg-transparent outline-none"
               }
-              placeholder="Buscar por nombre, email o NFC..."
+              placeholder="Buscar por nombre, DNI, email o NFC..."
             />
           </div>
 
@@ -452,6 +454,15 @@ export default function EmpleadosDirectory({
                           >
                             {usuario.email}
                           </div>
+                          <div
+                            className={
+                              usePrototypeDark
+                                ? "text-[11px] text-[#7289ad]"
+                                : "text-[11px] text-[color:var(--text-muted)]"
+                            }
+                          >
+                            DNI: {usuario.dni ?? "Sin registrar"}
+                          </div>
                         </div>
                       </div>
                       <button
@@ -610,6 +621,15 @@ export default function EmpleadosDirectory({
                             }
                           >
                             {usuario.email}
+                          </div>
+                          <div
+                            className={
+                              usePrototypeDark
+                                ? "text-[11px] text-[#7289ad]"
+                                : "text-[11px] text-[color:var(--text-muted)]"
+                            }
+                          >
+                            DNI: {usuario.dni ?? "Sin registrar"}
                           </div>
                         </div>
                       </div>
@@ -786,6 +806,9 @@ export default function EmpleadosDirectory({
                   <p className="text-xs text-[color:var(--text-muted)]">
                     {selectedUser.email}
                   </p>
+                  <p className="text-[11px] text-[color:var(--text-muted)]">
+                    DNI: {selectedUser.dni ?? "Sin registrar"}
+                  </p>
                 </div>
               </div>
 
@@ -847,6 +870,15 @@ export default function EmpleadosDirectory({
                     Seguridad y acceso
                   </div>
                   <div className="mt-3 space-y-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-[color:var(--text-muted)]">
+                        DNI / NIE
+                      </div>
+                      <DniUpdateForm
+                        usuarioId={selectedUser.id}
+                        dni={selectedUser.dni}
+                      />
+                    </div>
                     <div>
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase text-[color:var(--text-muted)]">
                         <Mail size={12} />
