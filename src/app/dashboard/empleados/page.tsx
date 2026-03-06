@@ -3,12 +3,10 @@ import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import { hashNfcUid, sanitizeNfcUid } from "../../utils/nfc";
+import { sanitizeId, sanitizeParam } from "../../utils/input";
 import EmpleadosDirectory from "./empleados-directory";
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-const getParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value;
 
 export default async function EmpleadosPage({
   searchParams,
@@ -28,17 +26,17 @@ export default async function EmpleadosPage({
   const role = session.user?.role ?? "";
   const currentUserId = session.user?.id ?? "";
   const resolvedSearchParams = (await searchParams) ?? {};
-  const query = (getParam(resolvedSearchParams.q) ?? "").trim();
+  const query = sanitizeParam(resolvedSearchParams.q, { maxLength: 120 });
   const empresaParam =
     role === "ADMIN_SISTEMA"
-      ? (getParam(resolvedSearchParams.empresaId) ?? "")
+      ? sanitizeId(sanitizeParam(resolvedSearchParams.empresaId))
       : "";
-  const rolParamRaw = getParam(resolvedSearchParams.rol) ?? "todos";
+  const rolParamRaw = sanitizeParam(resolvedSearchParams.rol).toUpperCase();
   const rolParam =
     rolParamRaw === "EMPLEADO" || rolParamRaw === "GERENTE"
       ? rolParamRaw
       : "todos";
-  const estadoParamRaw = getParam(resolvedSearchParams.estado) ?? "activos";
+  const estadoParamRaw = sanitizeParam(resolvedSearchParams.estado).toLowerCase();
   const estadoParam =
     estadoParamRaw === "baja" || estadoParamRaw === "todos"
       ? estadoParamRaw
@@ -59,7 +57,8 @@ export default async function EmpleadosPage({
         )?.empresaId ?? null
       : null;
 
-  const pageParamRaw = getParam(resolvedSearchParams.page) ?? "1";
+  const pageParamRaw =
+    sanitizeParam(resolvedSearchParams.page, { maxLength: 6 }) || "1";
   const page = Math.max(1, Number.parseInt(pageParamRaw, 10) || 1);
   const pageSize = 20;
   const skip = (page - 1) * pageSize;

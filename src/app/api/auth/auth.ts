@@ -3,8 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 import { comparePassword } from "../../../app/utils/password";
 import { prisma } from "../../../app/lib/prisma";
 import { hashNfcUid, sanitizeNfcUid } from "../../../app/utils/nfc";
+import { sanitizeEmail, sanitizeString } from "../../../app/utils/input";
 
-const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const normalizeEmail = (value: string) => sanitizeEmail(value);
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
@@ -154,6 +155,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = normalizeEmail(credentials.email as string);
+        const password = sanitizeString(credentials.password, {
+          trim: false,
+          maxLength: 256,
+        });
+        if (!email || !password) return null;
         if (await isLoginBlocked(email)) {
           await sleep(600);
           return null;
@@ -170,7 +176,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const isPasswordCorrect = await comparePassword(
-          credentials.password as string,
+          password,
           user.password,
         );
 
@@ -198,7 +204,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         uid: { label: "UID", type: "text" },
       },
       async authorize(credentials) {
-        const uidRaw = credentials?.uid?.toString() ?? "";
+        const uidRaw = sanitizeString(credentials?.uid, { maxLength: 128 });
         const uid = sanitizeNfcUid(uidRaw);
 
         if (!uid) return null;

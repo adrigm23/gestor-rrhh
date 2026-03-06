@@ -5,6 +5,10 @@ import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { comparePassword, hashPassword } from "../utils/password";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
+import {
+  sanitizeFormDataEmail,
+  sanitizeFormDataString,
+} from "../utils/input";
 
 export type AjustesState = {
   status: "idle" | "error" | "success";
@@ -24,8 +28,10 @@ export async function actualizarPerfil(
     return { ...emptyError, message: "Debes iniciar sesion." };
   }
 
-  const nombre = formData.get("nombre")?.toString().trim() ?? "";
-  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const nombre = sanitizeFormDataString(formData, "nombre", {
+    collapseWhitespace: true,
+  });
+  const email = sanitizeFormDataEmail(formData, "email");
 
   if (!nombre || !email) {
     return { ...emptyError, message: "Nombre y email son obligatorios." };
@@ -62,9 +68,18 @@ export async function actualizarPassword(
     return { ...emptyError, message: "Debes iniciar sesion." };
   }
 
-  const currentPassword = formData.get("currentPassword")?.toString() ?? "";
-  const newPassword = formData.get("newPassword")?.toString() ?? "";
-  const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
+  const currentPassword = sanitizeFormDataString(formData, "currentPassword", {
+    trim: false,
+    maxLength: 256,
+  });
+  const newPassword = sanitizeFormDataString(formData, "newPassword", {
+    trim: false,
+    maxLength: 256,
+  });
+  const confirmPassword = sanitizeFormDataString(formData, "confirmPassword", {
+    trim: false,
+    maxLength: 256,
+  });
 
   if (!currentPassword || !newPassword || !confirmPassword) {
     return { ...emptyError, message: "Completa todos los campos." };
@@ -112,7 +127,7 @@ export async function actualizarTarjetaNfc(
     return { ...emptyError, message: "Debes iniciar sesion." };
   }
 
-  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
+  const nfcUidRaw = sanitizeFormDataString(formData, "nfcUid");
   const nfcUid = sanitizeNfcUid(nfcUidRaw);
 
   if (!nfcUid) {

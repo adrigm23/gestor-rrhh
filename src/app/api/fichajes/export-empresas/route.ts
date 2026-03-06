@@ -1,6 +1,11 @@
 import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../../auth/auth";
 import { prisma } from "../../../lib/prisma";
+import {
+  sanitizeId,
+  sanitizeString,
+  sanitizeUrlSearchParam,
+} from "../../../utils/input";
 
 const parseDate = (value: string | null, endOfDay: boolean) => {
   if (!value) return null;
@@ -38,6 +43,14 @@ const diffMinutes = (entrada: Date, salida?: Date | null) => {
   return Math.floor(diffMs / 60000);
 };
 
+const sanitizeFilenamePart = (value: string | null, fallback: string) => {
+  const cleaned = sanitizeString(value, { maxLength: 32 }).replace(
+    /[^a-zA-Z0-9_-]/g,
+    "",
+  );
+  return cleaned || fallback;
+};
+
 type EmpresaResumen = {
   id: string;
   nombre: string;
@@ -63,12 +76,20 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const fromParam = searchParams.get("from");
-  const toParam = searchParams.get("to");
-  const estadoParam = searchParams.get("estado") ?? "todos";
-  const tipoParam = searchParams.get("tipo") ?? "todos";
-  const empresaParam = searchParams.get("empresaId") ?? "";
-  const limitParam = searchParams.get("limit");
+  const fromParam =
+    sanitizeUrlSearchParam(searchParams, "from", { maxLength: 10 }) || null;
+  const toParam =
+    sanitizeUrlSearchParam(searchParams, "to", { maxLength: 10 }) || null;
+  const estadoParam =
+    sanitizeUrlSearchParam(searchParams, "estado").toLowerCase() || "todos";
+  const tipoParam =
+    sanitizeUrlSearchParam(searchParams, "tipo").toUpperCase() || "TODOS";
+  const empresaParam = sanitizeId(
+    sanitizeUrlSearchParam(searchParams, "empresaId"),
+  );
+  const limitParam = sanitizeUrlSearchParam(searchParams, "limit", {
+    maxLength: 10,
+  });
   const defaultLimit = 20000;
   const maxLimit = 25000;
   const parsedLimit = Number.parseInt(limitParam ?? "", 10);
@@ -120,7 +141,7 @@ export async function GET(request: Request) {
     whereClause.salida = { not: null };
   }
 
-  if (tipoParam !== "todos") {
+  if (tipoParam !== "TODOS") {
     const tipo = toTipoFichaje(tipoParam);
     if (tipo) {
       whereClause.tipo = tipo;
@@ -211,7 +232,7 @@ export async function GET(request: Request) {
     });
 
   const csv = [header, ...rows].join("\n");
-  const filename = `fichajes-empresas-${fromParam ?? "inicio"}-${toParam ?? "fin"}.csv`;
+  const filename = `fichajes-empresas-${sanitizeFilenamePart(fromParam, "inicio")}-${sanitizeFilenamePart(toParam, "fin")}.csv`;
 
   return new Response(csv, {
     headers: {

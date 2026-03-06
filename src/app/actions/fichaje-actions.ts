@@ -5,10 +5,12 @@ import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { getApprovedLeaveType } from "../lib/vacaciones";
 import { revalidatePath } from "next/cache";
+import { sanitizeString } from "../utils/input";
 
 const parseCoord = (value: FormDataEntryValue | null) => {
-  if (!value || typeof value !== "string") return null;
-  const parsed = Number.parseFloat(value);
+  const sanitized = sanitizeString(value, { maxLength: 32 });
+  if (!sanitized) return null;
+  const parsed = Number.parseFloat(sanitized.replace(",", "."));
   return Number.isFinite(parsed) ? parsed : null;
 };
 

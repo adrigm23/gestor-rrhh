@@ -3,6 +3,11 @@
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+  sanitizeString,
+} from "../utils/input";
 
 export type OrganizacionState = {
   status: "idle" | "error" | "success";
@@ -13,10 +18,10 @@ const emptySuccess: OrganizacionState = { status: "success" };
 const emptyError: OrganizacionState = { status: "error" };
 
 const normalizeNombre = (value?: string | null) =>
-  value?.toString().trim().replace(/\s+/g, " ") ?? "";
+  sanitizeString(value, { collapseWhitespace: true });
 
 const normalizeDireccion = (value?: string | null) =>
-  value?.toString().trim().replace(/\s+/g, " ") ?? "";
+  sanitizeString(value, { collapseWhitespace: true });
 
 export async function crearCentroTrabajo(
   _prevState: OrganizacionState,
@@ -37,10 +42,12 @@ export async function crearCentroTrabajo(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = normalizeNombre(formData.get("nombre") as string);
-  const gerenteId = (formData.get("gerenteId") as string) || null;
-  const direccion = normalizeDireccion(formData.get("direccion") as string);
-  const empresaIdFromForm = (formData.get("empresaId") as string) || null;
+  const nombre = normalizeNombre(sanitizeFormDataString(formData, "nombre"));
+  const gerenteId = sanitizeFormDataId(formData, "gerenteId") || null;
+  const direccion = normalizeDireccion(
+    sanitizeFormDataString(formData, "direccion"),
+  );
+  const empresaIdFromForm = sanitizeFormDataId(formData, "empresaId") || null;
 
   if (!nombre) {
     return { ...emptyError, message: "Nombre requerido." };
@@ -108,10 +115,10 @@ export async function crearDepartamento(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = normalizeNombre(formData.get("nombre") as string);
-  const gerenteId = (formData.get("gerenteId") as string) || null;
-  const centroTrabajoId = (formData.get("centroTrabajoId") as string) || null;
-  const empresaIdFromForm = (formData.get("empresaId") as string) || null;
+  const nombre = normalizeNombre(sanitizeFormDataString(formData, "nombre"));
+  const gerenteId = sanitizeFormDataId(formData, "gerenteId") || null;
+  const centroTrabajoId = sanitizeFormDataId(formData, "centroTrabajoId") || null;
+  const empresaIdFromForm = sanitizeFormDataId(formData, "empresaId") || null;
 
   if (!nombre) {
     return { ...emptyError, message: "Nombre requerido." };
@@ -190,8 +197,10 @@ export async function actualizarCentroTrabajoDireccion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const centroId = formData.get("centroId")?.toString().trim() ?? "";
-  const direccion = normalizeDireccion(formData.get("direccion") as string);
+  const centroId = sanitizeFormDataId(formData, "centroId");
+  const direccion = normalizeDireccion(
+    sanitizeFormDataString(formData, "direccion"),
+  );
 
   if (!centroId) {
     return { ...emptyError, message: "Centro invalido." };

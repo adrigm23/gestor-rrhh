@@ -4,6 +4,11 @@
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../utils/password";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
+import {
+  sanitizeFormDataEmail,
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+} from "../utils/input";
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 
@@ -118,15 +123,20 @@ export async function crearUsuario(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = normalizeNombre(formData.get("nombre")?.toString() ?? "");
-  const dni = normalizeDni(formData.get("dni")?.toString() ?? "");
-  const email = normalizeEmail(formData.get("email")?.toString() ?? "");
-  const password = formData.get("password")?.toString() ?? "";
-  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
-  const departamentoId = formData.get("departamentoId")?.toString().trim() || null;
-  const empresaIdForm = formData.get("empresaId")?.toString().trim() || null;
-  const rolRaw = formData.get("rol")?.toString().trim().toUpperCase() ?? "";
-  const horasSemanalesRaw = formData.get("horasSemanales")?.toString() ?? "";
+  const nombre = normalizeNombre(
+    sanitizeFormDataString(formData, "nombre", { collapseWhitespace: true }),
+  );
+  const dni = normalizeDni(sanitizeFormDataString(formData, "dni"));
+  const email = normalizeEmail(sanitizeFormDataEmail(formData, "email"));
+  const password = sanitizeFormDataString(formData, "password", {
+    trim: false,
+    maxLength: 256,
+  });
+  const nfcUidRaw = sanitizeFormDataString(formData, "nfcUid");
+  const departamentoId = sanitizeFormDataId(formData, "departamentoId") || null;
+  const empresaIdForm = sanitizeFormDataId(formData, "empresaId") || null;
+  const rolRaw = sanitizeFormDataString(formData, "rol").toUpperCase();
+  const horasSemanalesRaw = sanitizeFormDataString(formData, "horasSemanales");
 
   if (!nombre || !dni || !email || !password) {
     return { ...emptyError, message: "Completa todos los campos obligatorios." };
@@ -271,9 +281,9 @@ export async function asignarTarjetaUsuario(
     return { ...emptyAssignError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const mode = formData.get("mode")?.toString() ?? "assign";
-  const nfcUidRaw = formData.get("nfcUid")?.toString() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const mode = sanitizeFormDataString(formData, "mode").toLowerCase() || "assign";
+  const nfcUidRaw = sanitizeFormDataString(formData, "nfcUid");
 
   if (!usuarioId) {
     return { ...emptyAssignError, message: "Usuario invalido." };
@@ -348,8 +358,8 @@ export async function cambiarEmpresaUsuario(
     return { ...emptyChangeError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const empresaId = sanitizeFormDataId(formData, "empresaId");
 
   if (!usuarioId || !empresaId) {
     return { ...emptyChangeError, message: "Datos incompletos." };
@@ -429,9 +439,9 @@ export async function crearContrato(
     return { ...emptyContratoError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const horasRaw = formData.get("horasSemanales")?.toString() ?? "";
-  const fechaInicioRaw = formData.get("fechaInicio")?.toString() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const horasRaw = sanitizeFormDataString(formData, "horasSemanales");
+  const fechaInicioRaw = sanitizeFormDataString(formData, "fechaInicio");
 
   if (!usuarioId) {
     return { ...emptyContratoError, message: "Empleado invalido." };
@@ -549,8 +559,11 @@ export async function resetUsuarioPassword(
     return { ...emptyResetError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const password = formData.get("password")?.toString() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const password = sanitizeFormDataString(formData, "password", {
+    trim: false,
+    maxLength: 256,
+  });
 
   if (!usuarioId || !password) {
     return { ...emptyResetError, message: "Completa todos los campos." };
@@ -606,7 +619,7 @@ export async function eliminarUsuario(
     return { ...emptyDeleteError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
   if (!usuarioId) {
     return { ...emptyDeleteError, message: "Usuario invalido." };
   }
@@ -712,8 +725,8 @@ export async function actualizarEstadoUsuario(
     return { ...emptyEstadoError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const accion = formData.get("accion")?.toString().trim() ?? "";
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const accion = sanitizeFormDataString(formData, "accion");
 
   if (!usuarioId) {
     return { ...emptyEstadoError, message: "Usuario invalido." };
@@ -782,8 +795,8 @@ export async function actualizarEmailUsuario(
     return { ...emptyUpdateError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const email = normalizeEmail(formData.get("email")?.toString() ?? "");
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const email = normalizeEmail(sanitizeFormDataEmail(formData, "email"));
 
   if (!usuarioId || !email) {
     return { ...emptyUpdateError, message: "Completa todos los campos." };
@@ -843,8 +856,8 @@ export async function actualizarDniUsuario(
     return { ...emptyUpdateDniError, message: "No autorizado." };
   }
 
-  const usuarioId = formData.get("usuarioId")?.toString().trim() ?? "";
-  const dni = normalizeDni(formData.get("dni")?.toString() ?? "");
+  const usuarioId = sanitizeFormDataId(formData, "usuarioId");
+  const dni = normalizeDni(sanitizeFormDataString(formData, "dni"));
 
   if (!usuarioId || !dni) {
     return { ...emptyUpdateDniError, message: "Completa todos los campos." };

@@ -3,6 +3,11 @@
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { revalidatePath } from "next/cache";
+import {
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+  sanitizeString,
+} from "../utils/input";
 
 export type EmpresaState = {
   status: "idle" | "error" | "success";
@@ -27,10 +32,10 @@ const emptyConfigSuccess: EmpresaConfigState = { status: "success" };
 const emptyConfigError: EmpresaConfigState = { status: "error" };
 
 const normalizeNombre = (value?: string | null) =>
-  value?.toString().trim().replace(/\s+/g, " ") ?? "";
+  sanitizeString(value, { collapseWhitespace: true });
 
 const normalizeCif = (value?: string | null) =>
-  value?.toString().trim().toUpperCase() ?? "";
+  sanitizeString(value).toUpperCase();
 
 export async function crearEmpresa(
   _prevState: EmpresaState,
@@ -51,8 +56,8 @@ export async function crearEmpresa(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const nombre = normalizeNombre(formData.get("nombre") as string);
-  const cif = normalizeCif(formData.get("cif") as string);
+  const nombre = normalizeNombre(sanitizeFormDataString(formData, "nombre"));
+  const cif = normalizeCif(sanitizeFormDataString(formData, "cif"));
 
   if (!nombre || !cif) {
     return { ...emptyError, message: "Nombre y CIF son obligatorios." };
@@ -117,7 +122,7 @@ export async function eliminarEmpresa(
     return { ...emptyDeleteError, message: "No autorizado." };
   }
 
-  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
+  const empresaId = sanitizeFormDataId(formData, "empresaId");
 
   if (!empresaId) {
     return { ...emptyDeleteError, message: "Empresa invalida." };
@@ -184,10 +189,12 @@ export async function actualizarPausaEmpresa(
     return { ...emptyConfigError, message: "No autorizado." };
   }
 
-  const empresaId = formData.get("empresaId")?.toString().trim() ?? "";
-  const valorRaw = formData.get("pausaCuenta")?.toString() ?? "true";
+  const empresaId = sanitizeFormDataId(formData, "empresaId");
+  const valorRaw =
+    sanitizeFormDataString(formData, "pausaCuenta").toLowerCase() || "true";
   const pausaCuenta = valorRaw === "true" || valorRaw === "1";
-  const geoRaw = formData.get("geoFichaje")?.toString() ?? "false";
+  const geoRaw =
+    sanitizeFormDataString(formData, "geoFichaje").toLowerCase() || "false";
   const geolocalizacionFichaje = geoRaw === "true" || geoRaw === "1";
 
   if (!empresaId) {

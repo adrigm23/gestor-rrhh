@@ -4,6 +4,7 @@ import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { getApprovedLeaveType } from "../lib/vacaciones";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
+import { sanitizeFormDataString } from "../utils/input";
 import { revalidatePath } from "next/cache";
 
 export type KioskoState = {
@@ -30,7 +31,7 @@ export async function registrarNfcKiosko(
     return { status: "error", message: "No tienes permisos." };
   }
 
-  const uidRaw = formData.get("uid")?.toString() ?? "";
+  const uidRaw = sanitizeFormDataString(formData, "uid");
   const uid = sanitizeNfcUid(uidRaw);
 
   if (!uid) {

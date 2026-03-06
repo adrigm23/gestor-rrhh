@@ -2,14 +2,12 @@ import { Prisma, TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { sanitizeId, sanitizeParam } from "../../utils/input";
 import ExportAsyncPanel from "./export-async-panel";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-const getParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value;
 
 const formatDuration = (entrada: Date, salida?: Date | null) => {
   if (!salida) return "En curso";
@@ -77,12 +75,15 @@ export default async function FichajesPage({
   const defaultFrom = defaultFromDate.toISOString().slice(0, 10);
 
   const resolvedSearchParams = (await searchParams) ?? {};
-  const fromParam = getParam(resolvedSearchParams.from) ?? defaultFrom;
-  const toParam = getParam(resolvedSearchParams.to) ?? defaultTo;
-  const estadoParam = getParam(resolvedSearchParams.estado) ?? "todos";
-  const tipoParam = getParam(resolvedSearchParams.tipo) ?? "todos";
-  const empresaParam = getParam(resolvedSearchParams.empresaId) ?? "";
-  const empleadoParam = getParam(resolvedSearchParams.empleadoId) ?? "";
+  const fromParam =
+    sanitizeParam(resolvedSearchParams.from, { maxLength: 10 }) || defaultFrom;
+  const toParam =
+    sanitizeParam(resolvedSearchParams.to, { maxLength: 10 }) || defaultTo;
+  const estadoParam =
+    sanitizeParam(resolvedSearchParams.estado).toLowerCase() || "todos";
+  const tipoParam = sanitizeParam(resolvedSearchParams.tipo) || "todos";
+  const empresaParam = sanitizeId(sanitizeParam(resolvedSearchParams.empresaId));
+  const empleadoParam = sanitizeId(sanitizeParam(resolvedSearchParams.empleadoId));
 
   const empresaFiltro = isAdmin ? empresaParam : gerenteEmpresaId ?? "";
   const canQuery = isAdmin || !!empresaFiltro;
@@ -155,7 +156,7 @@ export default async function FichajesPage({
   }
 
   if (tipoParam !== "todos") {
-    const tipo = toTipoFichaje(tipoParam);
+    const tipo = toTipoFichaje(tipoParam.toUpperCase());
     if (tipo) {
       whereClause.tipo = tipo;
     }
@@ -215,14 +216,15 @@ export default async function FichajesPage({
         ? "Cerrados"
         : "Todos";
 
+  const tipoParamUpper = tipoParam.toUpperCase();
   const tipoLabel =
-    tipoParam === "PAUSA_COMIDA"
+    tipoParamUpper === "PAUSA_COMIDA"
       ? "Pausa comida"
-      : tipoParam === "DESCANSO"
+      : tipoParamUpper === "DESCANSO"
         ? "Descanso"
-        : tipoParam === "MEDICO"
+        : tipoParamUpper === "MEDICO"
           ? "Medico"
-          : tipoParam === "JORNADA"
+          : tipoParamUpper === "JORNADA"
             ? "Jornada"
             : "Todos";
 

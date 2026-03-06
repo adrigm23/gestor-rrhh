@@ -2,14 +2,12 @@ import { TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { sanitizeId, sanitizeParam } from "../../utils/input";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-const getParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value;
 
 const parseDate = (value: string | undefined, endOfDay: boolean) => {
   if (!value) return null;
@@ -89,9 +87,9 @@ export default async function EscritorioPage({
   const defaultFromValue = defaultStart.toISOString().slice(0, 10);
   const defaultToValue = defaultEnd.toISOString().slice(0, 10);
 
-  const fromParam = getParam(searchParams.from);
-  const toParam = getParam(searchParams.to);
-  const empleadoParam = getParam(searchParams.empleadoId);
+  const fromParam = sanitizeParam(searchParams.from, { maxLength: 10 }) || undefined;
+  const toParam = sanitizeParam(searchParams.to, { maxLength: 10 }) || undefined;
+  const empleadoParam = sanitizeId(sanitizeParam(searchParams.empleadoId));
 
   const fromValue = fromParam ?? defaultFromValue;
   const toValue = toParam ?? defaultToValue;

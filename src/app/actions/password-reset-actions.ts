@@ -4,6 +4,10 @@ import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../utils/password";
 import { sendPasswordResetEmail } from "../lib/mailer";
+import {
+  sanitizeFormDataEmail,
+  sanitizeFormDataString,
+} from "../utils/input";
 
 export type PasswordResetState = {
   status: "idle" | "error" | "success";
@@ -46,7 +50,7 @@ export async function solicitarResetPassword(
   _prevState: PasswordResetState,
   formData: FormData,
 ): Promise<PasswordResetState> {
-  const email = formData.get("email")?.toString().trim().toLowerCase() ?? "";
+  const email = sanitizeFormDataEmail(formData, "email");
 
   if (!email) {
     return { ...emptyError, message: "Introduce un correo valido." };
@@ -119,9 +123,15 @@ export async function resetPassword(
   _prevState: PasswordResetState,
   formData: FormData,
 ): Promise<PasswordResetState> {
-  const token = formData.get("token")?.toString() ?? "";
-  const newPassword = formData.get("newPassword")?.toString() ?? "";
-  const confirmPassword = formData.get("confirmPassword")?.toString() ?? "";
+  const token = sanitizeFormDataString(formData, "token", { maxLength: 128 });
+  const newPassword = sanitizeFormDataString(formData, "newPassword", {
+    trim: false,
+    maxLength: 256,
+  });
+  const confirmPassword = sanitizeFormDataString(formData, "confirmPassword", {
+    trim: false,
+    maxLength: 256,
+  });
 
   if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
     return { ...emptyError, message: "Token invalido." };

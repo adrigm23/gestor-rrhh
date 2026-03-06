@@ -4,6 +4,12 @@ import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { createSignedUrl, uploadExportCsv } from "../lib/supabase-storage";
+import {
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+  sanitizeId,
+  sanitizeString,
+} from "../utils/input";
 
 export type ExportacionState = {
   status: "idle" | "error" | "success";
@@ -74,12 +80,22 @@ type ExportFilters = {
   empleadoId?: string;
 };
 
+const sanitizeFilenamePart = (value: string | undefined, fallback: string) => {
+  const cleaned = sanitizeString(value, { maxLength: 32 }).replace(
+    /[^a-zA-Z0-9_-]/g,
+    "",
+  );
+  return cleaned || fallback;
+};
+
 const buildWhereClause = (filters: ExportFilters, empresaId?: string | null) => {
-  const fromParam = filters.from ?? null;
-  const toParam = filters.to ?? null;
-  const estadoParam = filters.estado ?? "todos";
-  const tipoParam = filters.tipo ?? "todos";
-  const empleadoParam = filters.empleadoId ?? "";
+  const fromParam = sanitizeString(filters.from ?? null, { maxLength: 10 }) || null;
+  const toParam = sanitizeString(filters.to ?? null, { maxLength: 10 }) || null;
+  const estadoRaw = sanitizeString(filters.estado ?? "todos").toLowerCase();
+  const estadoParam =
+    estadoRaw === "abierto" || estadoRaw === "cerrado" ? estadoRaw : "todos";
+  const tipoParam = sanitizeString(filters.tipo ?? "todos").toUpperCase();
+  const empleadoParam = sanitizeId(filters.empleadoId ?? "");
 
   let desde = parseDate(fromParam, false);
   let hasta = parseDate(toParam, true);
@@ -112,7 +128,7 @@ const buildWhereClause = (filters: ExportFilters, empresaId?: string | null) => 
     whereClause.salida = { not: null };
   }
 
-  if (tipoParam !== "todos") {
+  if (tipoParam && tipoParam !== "TODOS") {
     const allowed: TipoFichaje[] = [
       "JORNADA",
       "PAUSA_COMIDA",
@@ -217,9 +233,12 @@ const buildEmpresaResumen = (items: {
 };
 
 const runExportJob = async (jobId: string) => {
+  const safeJobId = sanitizeId(jobId);
+  if (!safeJobId) return;
+
   try {
     const job = await prisma.exportacion.findUnique({
-      where: { id: jobId },
+      where: { id: safeJobId },
       select: {
         id: true,
         tipo: true,
@@ -234,7 +253,7 @@ const runExportJob = async (jobId: string) => {
     if (!job || job.estado === "LISTO") return;
 
     await prisma.exportacion.update({
-      where: { id: jobId },
+      where: { id: safeJobId },
       data: { estado: "GENERANDO", error: null },
     });
 
@@ -310,7 +329,7 @@ const runExportJob = async (jobId: string) => {
       });
 
       const csv = [header, ...rows].join("\n");
-      const filename = `exports/${job.id}/fichajes-${filtros.from ?? "inicio"}-${filtros.to ?? "fin"}.csv`;
+      const filename = `exports/${job.id}/fichajes-${sanitizeFilenamePart(filtros.from, "inicio")}-${sanitizeFilenamePart(filtros.to, "fin")}.csv`;
 
       await uploadExportCsv(csv, filename);
 
@@ -360,7 +379,7 @@ const runExportJob = async (jobId: string) => {
     const rows = buildEmpresaResumen(fichajes);
 
     const csv = [header, ...rows].join("\n");
-    const filename = `exports/${job.id}/fichajes-empresas-${filtros.from ?? "inicio"}-${filtros.to ?? "fin"}.csv`;
+    const filename = `exports/${job.id}/fichajes-empresas-${sanitizeFilenamePart(filtros.from, "inicio")}-${sanitizeFilenamePart(filtros.to, "fin")}.csv`;
 
     await uploadExportCsv(csv, filename);
 
@@ -370,7 +389,7 @@ const runExportJob = async (jobId: string) => {
     });
   } catch (error) {
     await prisma.exportacion.update({
-      where: { id: jobId },
+      where: { id: safeJobId },
       data: {
         estado: "ERROR",
         error: error instanceof Error ? error.message : "Error desconocido",
@@ -380,12 +399,13 @@ const runExportJob = async (jobId: string) => {
 };
 
 const ensureExportJobProgress = async (jobId: string) => {
-  if (runningExportJobs.has(jobId)) return;
-  runningExportJobs.add(jobId);
+  const safeJobId = sanitizeId(jobId);
+  if (!safeJobId || runningExportJobs.has(safeJobId)) return;
+  runningExportJobs.add(safeJobId);
   try {
-    await runExportJob(jobId);
+    await runExportJob(safeJobId);
   } finally {
-    runningExportJobs.delete(jobId);
+    runningExportJobs.delete(safeJobId);
   }
 };
 
@@ -399,7 +419,7 @@ export async function crearExportacion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const tipo = formData.get("tipo")?.toString() ?? "FICHAJES";
+  const tipo = sanitizeFormDataString(formData, "tipo").toUpperCase() || "FICHAJES";
   if (tipo !== "FICHAJES" && tipo !== "FICHAJES_EMPRESAS") {
     return { ...emptyError, message: "Tipo invalido." };
   }
@@ -409,14 +429,18 @@ export async function crearExportacion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const empresaIdForm = formData.get("empresaId")?.toString() ?? "";
-  const empleadoId = formData.get("empleadoId")?.toString() ?? "";
+  const empresaIdForm = sanitizeFormDataId(formData, "empresaId");
+  const empleadoId = sanitizeFormDataId(formData, "empleadoId");
+  const from = sanitizeFormDataString(formData, "from", { maxLength: 10 });
+  const to = sanitizeFormDataString(formData, "to", { maxLength: 10 });
+  const estado = sanitizeFormDataString(formData, "estado").toLowerCase();
+  const tipoFiltro = sanitizeFormDataString(formData, "tipoFiltro");
 
   const filtros: ExportFilters = {
-    from: formData.get("from")?.toString() ?? undefined,
-    to: formData.get("to")?.toString() ?? undefined,
-    estado: formData.get("estado")?.toString() ?? "todos",
-    tipo: formData.get("tipoFiltro")?.toString() ?? "todos",
+    from: from || undefined,
+    to: to || undefined,
+    estado: estado || "todos",
+    tipo: tipoFiltro || "todos",
     empresaId: empresaIdForm || undefined,
     empleadoId: empleadoId || undefined,
   };
@@ -472,6 +496,11 @@ export async function crearExportacion(
 }
 
 export async function obtenerExportacion(jobId: string): Promise<ExportacionStatus> {
+  const safeJobId = sanitizeId(jobId);
+  if (!safeJobId) {
+    return { status: "ERROR", error: "Exportacion no encontrada" };
+  }
+
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -479,7 +508,7 @@ export async function obtenerExportacion(jobId: string): Promise<ExportacionStat
   }
 
   const job = await prisma.exportacion.findUnique({
-    where: { id: jobId },
+    where: { id: safeJobId },
     select: {
       estado: true,
       archivoRuta: true,
@@ -498,9 +527,9 @@ export async function obtenerExportacion(jobId: string): Promise<ExportacionStat
   }
 
   if (job.estado === "PENDIENTE" || job.estado === "GENERANDO") {
-    await ensureExportJobProgress(jobId);
+    await ensureExportJobProgress(safeJobId);
     const refreshed = await prisma.exportacion.findUnique({
-      where: { id: jobId },
+      where: { id: safeJobId },
       select: { estado: true, archivoRuta: true, error: true },
     });
 

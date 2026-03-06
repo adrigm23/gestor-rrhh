@@ -7,6 +7,10 @@ import {
   createSignedUrl,
   deleteJustificante,
 } from "../lib/supabase-storage";
+import {
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+} from "../utils/input";
 
 export type SolicitudState = {
   status: "idle" | "error" | "success";
@@ -70,9 +74,16 @@ export async function solicitarVacaciones(
     return { ...emptyError, message: "Debes iniciar sesion." };
   }
 
-  const inicioValue = formData.get("inicio")?.toString() ?? "";
-  const finValue = formData.get("fin")?.toString() ?? "";
-  const motivo = formData.get("motivo")?.toString() ?? "";
+  const inicioValue = sanitizeFormDataString(formData, "inicio", {
+    maxLength: 10,
+  });
+  const finValue = sanitizeFormDataString(formData, "fin", {
+    maxLength: 10,
+  });
+  const motivo = sanitizeFormDataString(formData, "motivo", {
+    allowNewlines: true,
+    maxLength: 2000,
+  });
 
   const inicio = parseDate(inicioValue);
   const fin = parseDate(finValue) ?? inicio;
@@ -137,10 +148,17 @@ export async function notificarAusencia(
     return { ...emptyError, message: "Debes iniciar sesion." };
   }
 
-  const inicioValue = formData.get("inicio")?.toString() ?? "";
-  const finValue = formData.get("fin")?.toString() ?? "";
-  const motivo = formData.get("motivo")?.toString() ?? "";
-  const ausenciaTipoRaw = formData.get("ausenciaTipo")?.toString() ?? "";
+  const inicioValue = sanitizeFormDataString(formData, "inicio", {
+    maxLength: 10,
+  });
+  const finValue = sanitizeFormDataString(formData, "fin", {
+    maxLength: 10,
+  });
+  const motivo = sanitizeFormDataString(formData, "motivo", {
+    allowNewlines: true,
+    maxLength: 2000,
+  });
+  const ausenciaTipoRaw = sanitizeFormDataString(formData, "ausenciaTipo").toUpperCase();
   const ausenciaTipo =
     ausenciaTipoRaw === "FALTA" || ausenciaTipoRaw === "AVISO"
       ? (ausenciaTipoRaw as "FALTA" | "AVISO")
@@ -231,7 +249,7 @@ export async function obtenerUrlJustificante(formData: FormData) {
     throw new Error("No autorizado");
   }
 
-  const solicitudId = formData.get("id")?.toString() ?? "";
+  const solicitudId = sanitizeFormDataId(formData, "id");
   if (!solicitudId) {
     throw new Error("Solicitud invalida");
   }
@@ -280,8 +298,8 @@ export async function actualizarSolicitud(formData: FormData) {
     throw new Error("No autorizado");
   }
 
-  const solicitudId = formData.get("id")?.toString() ?? "";
-  const estado = formData.get("estado")?.toString() ?? "";
+  const solicitudId = sanitizeFormDataId(formData, "id");
+  const estado = sanitizeFormDataString(formData, "estado").toUpperCase();
 
   if (!solicitudId) {
     throw new Error("Solicitud invalida.");
@@ -362,7 +380,7 @@ export async function eliminarJustificante(formData: FormData) {
     throw new Error("No autorizado");
   }
 
-  const solicitudId = formData.get("id")?.toString() ?? "";
+  const solicitudId = sanitizeFormDataId(formData, "id");
 
   if (!solicitudId) {
     return;

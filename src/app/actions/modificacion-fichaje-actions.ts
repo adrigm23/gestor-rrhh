@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
+import {
+  sanitizeFormDataId,
+  sanitizeFormDataString,
+  sanitizeString,
+} from "../utils/input";
 
 export type ModificacionFichajeState = {
   status: "idle" | "error" | "success";
@@ -49,7 +54,8 @@ const parseDateTime = (
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const normalizeText = (value?: string | null) => value?.toString().trim() ?? "";
+const normalizeText = (value?: string | null) =>
+  sanitizeString(value, { allowNewlines: true });
 
 const isInvalidRange = (entrada: Date | null, salida: Date | null) =>
   Boolean(entrada && salida && salida.getTime() <= entrada.getTime());
@@ -118,14 +124,20 @@ export async function crearSolicitudModificacion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const empleadoId = formData.get("empleadoId")?.toString() ?? "";
-  const fichajeId = formData.get("fichajeId")?.toString() ?? "";
-  const entradaValue = formData.get("entrada")?.toString() ?? "";
-  const salidaValue = formData.get("salida")?.toString() ?? "";
-  const tzOffsetValue = formData.get("tzOffset")?.toString() ?? "";
+  const empleadoId = sanitizeFormDataId(formData, "empleadoId");
+  const fichajeId = sanitizeFormDataId(formData, "fichajeId");
+  const entradaValue = sanitizeFormDataString(formData, "entrada", {
+    maxLength: 32,
+  });
+  const salidaValue = sanitizeFormDataString(formData, "salida", {
+    maxLength: 32,
+  });
+  const tzOffsetValue = sanitizeFormDataString(formData, "tzOffset", {
+    maxLength: 8,
+  });
   const tzOffsetMinutes =
     tzOffsetValue === "" ? null : Number(tzOffsetValue);
-  const motivo = normalizeText(formData.get("motivo")?.toString() ?? "");
+  const motivo = normalizeText(sanitizeFormDataString(formData, "motivo"));
 
   if (!empleadoId) {
     return { ...emptyError, message: "Selecciona un empleado." };
@@ -204,8 +216,8 @@ export async function responderSolicitudModificacion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const solicitudId = formData.get("id")?.toString() ?? "";
-  const accion = formData.get("accion")?.toString() ?? "";
+  const solicitudId = sanitizeFormDataId(formData, "id");
+  const accion = sanitizeFormDataString(formData, "accion");
 
   if (!solicitudId || (accion !== "ACEPTADA" && accion !== "RECHAZADA")) {
     return { ...emptyError, message: "Solicitud invalida." };
