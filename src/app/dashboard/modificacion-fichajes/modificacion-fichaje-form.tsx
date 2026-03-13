@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { formatAppDateTime } from "../../utils/datetime";
 import {
   crearSolicitudModificacion,
   type ModificacionFichajeState,
@@ -29,8 +30,8 @@ type ModificacionFichajeFormProps = {
 const initialState: ModificacionFichajeState = { status: "idle" };
 
 const formatFichaje = (item: FichajeOption) => {
-  const entrada = new Date(item.entrada).toLocaleString("es-ES");
-  const salida = item.salida ? new Date(item.salida).toLocaleString("es-ES") : "Sin salida";
+  const entrada = formatAppDateTime(item.entrada);
+  const salida = item.salida ? formatAppDateTime(item.salida) : "Sin salida";
   return `${item.empleadoNombre} - ${entrada} (${salida})`;
 };
 

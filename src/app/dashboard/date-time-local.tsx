@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatAppDateTime } from "../utils/datetime";
 
 type DateTimeLocalProps = {
   value?: string | null;
@@ -21,8 +22,7 @@ export default function DateTimeLocal({
       return;
     }
 
-    const date = new Date(value);
-    setLabel(Number.isNaN(date.getTime()) ? fallback : date.toLocaleString(locale));
+    setLabel(formatAppDateTime(value, {}, fallback));
   }, [fallback, locale, value]);
 
   return <span suppressHydrationWarning>{label}</span>;

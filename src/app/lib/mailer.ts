@@ -6,10 +6,16 @@ const SMTP_HOST = process.env.SMTP_HOST ?? "";
 const SMTP_PORT = Number(process.env.SMTP_PORT ?? "587");
 const SMTP_USER = process.env.SMTP_USER ?? "";
 const SMTP_PASS = process.env.SMTP_PASS ?? "";
-const SMTP_FROM = process.env.SMTP_FROM ?? "";
+const SMTP_FROM = (process.env.SMTP_FROM ?? "").trim();
+const SMTP_FROM_NAME = (process.env.SMTP_FROM_NAME ?? "")
+  .replace(/[\r\n]/g, "")
+  .trim();
 const SMTP_SECURE = process.env.SMTP_SECURE === "true";
 
 const isConfigured = () => SMTP_HOST && SMTP_FROM;
+const smtpFromAddress = SMTP_FROM_NAME
+  ? `${SMTP_FROM_NAME} <${SMTP_FROM}>`
+  : SMTP_FROM;
 
 export const sendPasswordResetEmail = async (params: {
   to: string;
@@ -40,7 +46,7 @@ export const sendPasswordResetEmail = async (params: {
   ].join("\n");
 
   await transporter.sendMail({
-    from: SMTP_FROM,
+    from: smtpFromAddress,
     to: params.to,
     subject: "Restablecer contrasena",
     text,
@@ -90,7 +96,7 @@ export const sendDbUsageAlertEmail = async (params: {
   ].join("\n");
 
   await transporter.sendMail({
-    from: SMTP_FROM,
+    from: smtpFromAddress,
     to: params.to,
     subject: `${subjectPrefix} - Uso de base de datos`,
     text,

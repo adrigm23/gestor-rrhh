@@ -18,6 +18,11 @@ import DashboardQuickActions from "./dashboard-quick-actions";
 import SolicitudesFichajeEmpleado, {
   type SolicitudFichajeEmpleado,
 } from "./solicitudes-fichaje-empleado";
+import {
+  formatAppLongDate,
+  formatAppTime,
+  getAppHour,
+} from "../utils/datetime";
 
 const capitalize = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
@@ -93,20 +98,14 @@ export default async function DashboardPage() {
   const isOnLeave = Boolean(approvedLeaveType);
 
   const now = new Date();
+  const appHour = getAppHour(now);
   const greeting =
-    now.getHours() < 12
+    appHour < 12
       ? "Buenos dias"
-      : now.getHours() < 20
+      : appHour < 20
         ? "Buenas tardes"
         : "Buenas noches";
-  const fechaLarga = capitalize(
-    now.toLocaleDateString("es-ES", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
-  );
+  const fechaLarga = capitalize(formatAppLongDate(now));
 
   const jornadaActiva = userId
     ? await prisma.fichaje.findFirst({
@@ -515,10 +514,7 @@ export default async function DashboardPage() {
                             {formatActividadTipo(fichaje.tipo)}
                           </td>
                           <td className="px-4 py-3">
-                            {fichaje.entrada.toLocaleTimeString("es-ES", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatAppTime(fichaje.entrada)}
                           </td>
                           <td className="px-4 py-3">{ubicacion}</td>
                           <td className="px-4 py-3">

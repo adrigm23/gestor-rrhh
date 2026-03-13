@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatAppTime } from "../utils/datetime";
 
 type ConectadoDesdeProps = {
   startIso?: string | null;
@@ -8,12 +9,6 @@ type ConectadoDesdeProps = {
   prefix?: string;
   locale?: string;
 };
-
-const formatTime = (iso: string, locale: string) =>
-  new Date(iso).toLocaleTimeString(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 export default function ConectadoDesde({
   startIso,
@@ -29,7 +24,7 @@ export default function ConectadoDesde({
       return;
     }
 
-    setLabel(`${prefix} ${formatTime(startIso, locale)}`);
+    setLabel(`${prefix} ${formatAppTime(startIso)}`);
   }, [fallback, locale, prefix, startIso]);
 
   return <span suppressHydrationWarning>{label}</span>;

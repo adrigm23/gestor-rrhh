@@ -1,6 +1,7 @@
 import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../../auth/auth";
 import { prisma } from "../../../lib/prisma";
+import { formatAppDateTime } from "../../../utils/datetime";
 import {
   sanitizeId,
   sanitizeString,
@@ -184,8 +185,8 @@ export async function GET(request: Request) {
       item.usuario.nombre,
       item.usuario.email,
       item.usuario.empresa?.nombre ?? "",
-      item.entrada.toLocaleString("es-ES"),
-      item.salida ? item.salida.toLocaleString("es-ES") : "En curso",
+      formatAppDateTime(item.entrada),
+      item.salida ? formatAppDateTime(item.salida) : "En curso",
       formatDuration(item.entrada, item.salida),
       formatTipo(item.tipo),
       item.salida ? "Cerrado" : "Abierto",

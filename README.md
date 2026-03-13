@@ -20,6 +20,24 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## SMTP (correo saliente)
+
+Para cambiar el correo desde el que se envian emails (reset de contrasena, alertas, etc.), configura estas variables en `.env`:
+
+```env
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=tu-correo@tu-dominio.com
+SMTP_FROM_NAME=Gestor RRHH
+SMTP_SECURE=false
+APP_URL=https://tu-dominio.com
+```
+
+- `SMTP_FROM` define la direccion de remitente.
+- `SMTP_FROM_NAME` define el nombre visible del remitente (opcional).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

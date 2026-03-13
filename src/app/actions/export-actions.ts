@@ -4,6 +4,7 @@ import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
 import { createSignedUrl, uploadExportCsv } from "../lib/supabase-storage";
+import { formatAppDateTime } from "../utils/datetime";
 import {
   sanitizeFormDataId,
   sanitizeFormDataString,
@@ -317,8 +318,8 @@ const runExportJob = async (jobId: string) => {
           item.usuario.nombre,
           item.usuario.email,
           item.usuario.empresa?.nombre ?? "",
-          item.entrada.toLocaleString("es-ES"),
-          item.salida ? item.salida.toLocaleString("es-ES") : "En curso",
+          formatAppDateTime(item.entrada),
+          item.salida ? formatAppDateTime(item.salida) : "En curso",
           formatDuration(item.entrada, item.salida),
           formatTipo(item.tipo),
           item.salida ? "Cerrado" : "Abierto",

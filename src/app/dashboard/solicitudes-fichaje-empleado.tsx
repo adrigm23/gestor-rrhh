@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { formatAppDateTime } from "../utils/datetime";
 import {
   responderSolicitudModificacion,
   type ModificacionFichajeState,
@@ -26,8 +27,7 @@ const initialState: ModificacionFichajeState = { status: "idle" };
 
 const formatDate = (value?: string | null) => {
   if (!value) return "Sin dato";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Sin dato" : date.toLocaleString("es-ES");
+  return formatAppDateTime(value);
 };
 
 export default function SolicitudesFichajeEmpleado({

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { formatAppTime } from "../../utils/datetime";
 import KioskoForm from "./kiosko-form";
 
 export default async function KioskoPage() {
@@ -89,7 +90,7 @@ export default async function KioskoPage() {
                     </div>
                     <div className="text-right text-xs text-[color:var(--text-muted)]">
                       <p className={`font-semibold ${estadoClass}`}>{estado}</p>
-                      <p>{fichaje.entrada.toLocaleTimeString("es-ES")}</p>
+                      <p>{formatAppTime(fichaje.entrada)}</p>
                     </div>
                   </div>
                 );

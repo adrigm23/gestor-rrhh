@@ -2,6 +2,7 @@ import { Prisma, TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { formatAppDate, formatAppTime } from "../../utils/datetime";
 import { sanitizeId, sanitizeParam } from "../../utils/input";
 import ExportAsyncPanel from "./export-async-panel";
 
@@ -446,20 +447,14 @@ export default async function FichajesPage({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {fichaje.entrada.toLocaleDateString("es-ES")}
+                        {formatAppDate(fichaje.entrada)}
                       </td>
                       <td className="px-4 py-3">
-                        {fichaje.entrada.toLocaleTimeString("es-ES", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatAppTime(fichaje.entrada)}
                       </td>
                       <td className="px-4 py-3">
                         {fichaje.salida
-                          ? fichaje.salida.toLocaleTimeString("es-ES", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                          ? formatAppTime(fichaje.salida)
                           : "--"}
                       </td>
                       <td className="px-4 py-3">

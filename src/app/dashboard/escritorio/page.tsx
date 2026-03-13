@@ -2,6 +2,10 @@ import { TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import {
+  formatAppDate,
+  formatAppDateTime,
+} from "../../utils/datetime";
 import { sanitizeId, sanitizeParam } from "../../utils/input";
 
 export const dynamic = "force-dynamic";
@@ -227,8 +231,8 @@ export default async function EscritorioPage({
       ? Math.min(100, (totalHoras / contratoHoras) * 100)
       : null;
 
-  const rangeLabel = `${range.start.toLocaleDateString("es-ES")} - ${range.end.toLocaleDateString("es-ES")}`;
-  const tableLabel = `${tableRange.start.toLocaleDateString("es-ES")} - ${tableRange.end.toLocaleDateString("es-ES")}`;
+  const rangeLabel = `${formatAppDate(range.start)} - ${formatAppDate(range.end)}`;
+  const tableLabel = `${formatAppDate(tableRange.start)} - ${formatAppDate(tableRange.end)}`;
 
   return (
     <div className="space-y-8">
@@ -329,7 +333,7 @@ export default async function EscritorioPage({
             </p>
             {contrato?.fechaInicio && (
               <p className="mt-1 text-xs text-slate-400">
-                Desde {contrato.fechaInicio.toLocaleDateString("es-ES")}
+                Desde {formatAppDate(contrato.fechaInicio)}
               </p>
             )}
           </div>
@@ -393,11 +397,11 @@ export default async function EscritorioPage({
                   return (
                     <tr key={fichaje.id} className="text-slate-600">
                       <td className="px-4 py-3">
-                        {fichaje.entrada.toLocaleString("es-ES")}
+                        {formatAppDateTime(fichaje.entrada)}
                       </td>
                       <td className="px-4 py-3">
                         {fichaje.salida
-                          ? fichaje.salida.toLocaleString("es-ES")
+                          ? formatAppDateTime(fichaje.salida)
                           : "En curso"}
                       </td>
                       <td className="px-4 py-3">
