@@ -50,7 +50,7 @@ export default function DniUpdateForm({ usuarioId, dni }: DniUpdateFormProps) {
           onChange={(event) => setValue(event.target.value.toUpperCase())}
           className="w-full rounded-xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-2 py-2 text-xs text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
           placeholder="12345678Z"
-          pattern="^([XYZxyz]\\d{7}|\\d{8})[A-Za-z]$"
+          pattern={/^([XYZxyz]\d{7}|\d{8})[A-Za-z]$/.source}
           title="Formato valido: 12345678Z o X1234567L"
           required
         />

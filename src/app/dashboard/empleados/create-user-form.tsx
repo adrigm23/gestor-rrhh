@@ -124,7 +124,7 @@ export default function CreateUserForm({
               name="dni"
               type="text"
               required
-              pattern="^([XYZxyz]\\d{7}|\\d{8})[A-Za-z]$"
+              pattern={/^([XYZxyz]\d{7}|\d{8})[A-Za-z]$/.source}
               title="Formato valido: 12345678Z o X1234567L"
               autoCapitalize="characters"
               className={inputClass}
