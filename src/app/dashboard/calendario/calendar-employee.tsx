@@ -543,16 +543,34 @@ export default function CalendarioEmpleado({
       <section className="space-y-6 md:hidden">
         <div className="rounded-[28px] border border-[color:var(--card-border)] bg-[color:var(--card)] p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-lg font-semibold text-[color:var(--text-primary)]">
-                {monthTitle}
-              </p>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="text-xs font-semibold text-sky-500"
-                onClick={() => setViewDate(new Date())}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]"
+                onClick={() => setViewDate(new Date(year, month - 1, 1))}
+                aria-label="Mes anterior"
               >
-                Seleccionar mes
+                <ChevronLeft size={16} />
+              </button>
+              <div>
+                <p className="text-lg font-semibold text-[color:var(--text-primary)]">
+                  {monthTitle}
+                </p>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-sky-500"
+                  onClick={() => setViewDate(new Date())}
+                >
+                  Ir a hoy
+                </button>
+              </div>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] text-[color:var(--text-muted)]"
+                onClick={() => setViewDate(new Date(year, month + 1, 1))}
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight size={16} />
               </button>
             </div>
             <button
