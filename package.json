@@ -54,6 +54,9 @@
     "fast-xml-parser": "5.3.6",
     "hono": "4.11.10",
     "lodash": "4.17.23",
-    "minimatch": "10.2.1"
+    "minimatch": "10.2.1",
+    "next-auth": {
+      "nodemailer": "$nodemailer"
+    }
   }
 }
