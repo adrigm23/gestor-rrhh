@@ -1,7 +1,6 @@
-import { EstadoSolicitud, Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
-import { prisma } from "../../lib/prisma";
+import { solicitudService } from "../../../services/solicitud";
 import SolicitudesPanel, {
   type SolicitudPendiente,
   type SolicitudHistorial,
@@ -19,78 +18,15 @@ export default async function VacacionesAusenciasPage() {
   }
 
   const role = session.user?.role;
+  if (role !== "GERENTE" && role !== "ADMIN_SISTEMA") {
+    redirect("/dashboard");
+  }
 
-  const gerenteEmpresaId =
-    role === "GERENTE"
-      ? (
-          await prisma.usuario.findUnique({
-            where: { id: session.user?.id ?? "" },
-            select: { empresaId: true },
-          })
-        )?.empresaId ?? null
-      : null;
+  const userId = session.user?.id ?? "";
 
-  const wherePendientes: Prisma.SolicitudWhereInput =
-    role === "ADMIN_SISTEMA"
-      ? { estado: EstadoSolicitud.PENDIENTE }
-      : gerenteEmpresaId
-        ? {
-            estado: EstadoSolicitud.PENDIENTE,
-            usuario: { empresaId: gerenteEmpresaId },
-          }
-        : { estado: EstadoSolicitud.PENDIENTE, usuarioId: "__none__" };
-
-  type SolicitudConUsuario = Prisma.SolicitudGetPayload<{
-    include: {
-      usuario: {
-        select: {
-          nombre: true;
-          email: true;
-        };
-      };
-    };
-  }>;
-
-  const historicoEstados = [
-    EstadoSolicitud.APROBADA,
-    EstadoSolicitud.RECHAZADA,
-    EstadoSolicitud.ANULADA,
-  ];
-
-  const whereHistorico: Prisma.SolicitudWhereInput =
-    role === "ADMIN_SISTEMA"
-      ? { estado: { in: historicoEstados } }
-      : gerenteEmpresaId
-        ? {
-            estado: { in: historicoEstados },
-            usuario: { empresaId: gerenteEmpresaId },
-          }
-        : { estado: EstadoSolicitud.APROBADA, usuarioId: "__none__" };
-
-  const [solicitudesPendientes, solicitudesHistorico]: [
-    SolicitudConUsuario[],
-    SolicitudConUsuario[],
-  ] = await Promise.all([
-    prisma.solicitud.findMany({
-      where: wherePendientes,
-      include: {
-        usuario: {
-          select: { nombre: true, email: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 30,
-    }),
-    prisma.solicitud.findMany({
-      where: whereHistorico,
-      include: {
-        usuario: {
-          select: { nombre: true, email: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
+  const [solicitudesPendientes, solicitudesHistorico] = await Promise.all([
+    solicitudService.listPendingForManager(userId, role, 30),
+    solicitudService.listHistoryForManager(userId, role, 10),
   ]);
 
   const pendientes: SolicitudPendiente[] = solicitudesPendientes.map((item) => ({
@@ -100,10 +36,10 @@ export default async function VacacionesAusenciasPage() {
     fin: item.fin ? item.fin.toISOString() : null,
     motivo: item.motivo ?? null,
     ausenciaTipo: item.ausenciaTipo ?? null,
-    justificanteNombre: item.justificanteNombre ?? null,
-    justificanteRuta: item.justificanteRuta ?? null,
-    usuarioNombre: item.usuario.nombre,
-    usuarioEmail: item.usuario.email,
+    justificanteNombre: item.justificanteNombre,
+    justificanteRuta: item.justificanteRuta,
+    usuarioNombre: item.usuarioNombre,
+    usuarioEmail: item.usuarioEmail,
   }));
 
   const historico: SolicitudHistorial[] = solicitudesHistorico.map((item) => ({
@@ -114,8 +50,8 @@ export default async function VacacionesAusenciasPage() {
     motivo: item.motivo ?? null,
     ausenciaTipo: item.ausenciaTipo ?? null,
     estado: item.estado,
-    usuarioNombre: item.usuario.nombre,
-    usuarioEmail: item.usuario.email,
+    usuarioNombre: item.usuarioNombre,
+    usuarioEmail: item.usuarioEmail,
   }));
 
   return <SolicitudesPanel solicitudes={pendientes} historico={historico} />;

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
-import { comparePassword, hashPassword } from "../utils/password";
+import { usuarioService } from "../../services/usuario";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
 import {
   sanitizeFormDataEmail,
@@ -37,19 +37,11 @@ export async function actualizarPerfil(
     return { ...emptyError, message: "Nombre y email son obligatorios." };
   }
 
-  const existente = await prisma.usuario.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  const result = await usuarioService.updateProfile(session.user.id, { nombre, email });
 
-  if (existente && existente.id !== session.user.id) {
+  if (result.outcome === "email-taken") {
     return { ...emptyError, message: "Ese email ya esta en uso." };
   }
-
-  await prisma.usuario.update({
-    where: { id: session.user.id },
-    data: { nombre, email },
-  });
 
   revalidatePath("/dashboard/ajustes");
   return {
@@ -93,25 +85,14 @@ export async function actualizarPassword(
     return { ...emptyError, message: "Las contrasenas no coinciden." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: session.user.id },
-    select: { password: true },
+  const result = await usuarioService.changePassword(session.user.id, {
+    currentPassword,
+    newPassword,
   });
 
-  if (!usuario || !usuario.password) {
-    return { ...emptyError, message: "No se pudo validar la cuenta." };
-  }
-
-  const isValid = await comparePassword(currentPassword, usuario.password);
-  if (!isValid) {
+  if (result.outcome === "invalid-current-password") {
     return { ...emptyError, message: "Contrasena actual incorrecta." };
   }
-
-  const hashedPassword = await hashPassword(newPassword);
-  await prisma.usuario.update({
-    where: { id: session.user.id },
-    data: { password: hashedPassword, passwordMustChange: false },
-  });
 
   revalidatePath("/dashboard/ajustes");
   return { ...emptySuccess, message: "Contrasena actualizada." };

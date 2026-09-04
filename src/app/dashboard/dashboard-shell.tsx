@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "./sidebar";
 import HeaderActions from "./header-actions";
+import type { DashboardNotificationSummary } from "./notification-types";
 
 type DashboardShellProps = {
   children: ReactNode;
   userName: string;
   role?: string;
   mustChangePassword?: boolean;
+  notificationSummary: DashboardNotificationSummary;
 };
 
 export default function DashboardShell({
@@ -18,6 +20,7 @@ export default function DashboardShell({
   userName,
   role,
   mustChangePassword = false,
+  notificationSummary,
 }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -67,6 +70,7 @@ export default function DashboardShell({
           <header className="sticky top-0 z-20 border-b border-[color:var(--header-border)] bg-[color:var(--header-bg)] backdrop-blur md:static md:border-b-0 md:bg-transparent md:backdrop-blur-none">
             <HeaderActions
               userName={userName}
+              notificationSummary={notificationSummary}
               onMenuClick={() => setMobileMenuOpen(true)}
             />
           </header>

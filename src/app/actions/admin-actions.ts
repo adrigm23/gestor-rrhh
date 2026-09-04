@@ -2,7 +2,6 @@
 "use server";
 
 import { prisma } from "../lib/prisma";
-import { hashPassword } from "../utils/password";
 import { hashNfcUid, sanitizeNfcUid } from "../utils/nfc";
 import {
   sanitizeFormDataEmail,
@@ -11,6 +10,7 @@ import {
 } from "../utils/input";
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
+import { usuarioService } from "../../services/usuario";
 
 export type CrearUsuarioState = {
   status: "idle" | "error" | "success";
@@ -158,22 +158,6 @@ export async function crearUsuario(
     return { ...emptyError, message: "Empresa requerida." };
   }
 
-  const nfcUid = sanitizeNfcUid(nfcUidRaw);
-  let nfcUidHash: string | null = null;
-  if (nfcUid) {
-    if (nfcUid.length < 4 || nfcUid.length > 32) {
-      return { ...emptyError, message: "UID de tarjeta invalido." };
-    }
-    nfcUidHash = hashNfcUid(nfcUid);
-    const existenteUid = await prisma.usuario.findFirst({
-      where: { nfcUidHash },
-      select: { id: true },
-    });
-    if (existenteUid) {
-      return { ...emptyError, message: "Esa tarjeta ya esta asignada." };
-    }
-  }
-
   let rol: "EMPLEADO" | "GERENTE";
   if (rolRaw === "GERENTE") {
     rol = "GERENTE";
@@ -196,63 +180,34 @@ export async function crearUsuario(
   }
 
   try {
-    const existente = await prisma.usuario.findUnique({
-      where: { email },
-      select: { id: true },
+    const result = await usuarioService.crearUsuario({
+      nombre,
+      dni,
+      email,
+      password,
+      rol,
+      empresaId: empresaIdForm,
+      departamentoId: rol === "EMPLEADO" ? departamentoId : null,
+      horasSemanales: rol === "EMPLEADO" ? horasSemanales : null,
+      nfcUid: nfcUidRaw || null,
     });
 
-    if (existente) {
-      return { ...emptyError, message: "Ese email ya esta en uso." };
-    }
-
-    const existenteDni = await prisma.usuario.findUnique({
-      where: { dni },
-      select: { id: true },
-    });
-
-    if (existenteDni) {
-      return { ...emptyError, message: "Ese DNI/NIE ya esta en uso." };
-    }
-
-    const hashedPassword = await hashPassword(password);
-    const departamentoFinal = rol === "EMPLEADO" ? departamentoId : null;
-
-    if (departamentoFinal) {
-      const departamento = await prisma.departamento.findUnique({
-        where: { id: departamentoFinal },
-        select: { empresaId: true },
-      });
-
-      if (!departamento || departamento.empresaId !== empresaIdForm) {
+    switch (result.outcome) {
+      case "ok":
+        break;
+      case "invalid-dni":
+        return { ...emptyError, message: "DNI/NIE invalido." };
+      case "email-taken":
+        return { ...emptyError, message: "Ese email ya esta en uso." };
+      case "dni-taken":
+        return { ...emptyError, message: "Ese DNI/NIE ya esta en uso." };
+      case "invalid-departamento":
         return { ...emptyError, message: "Departamento invalido." };
-      }
+      case "invalid-nfc":
+        return { ...emptyError, message: "UID de tarjeta invalido." };
+      case "nfc-taken":
+        return { ...emptyError, message: "Esa tarjeta ya esta asignada." };
     }
-
-    await prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.create({
-        data: {
-          nombre,
-          dni,
-          email,
-          password: hashedPassword,
-          passwordMustChange: true,
-          rol,
-          empresaId: empresaIdForm,
-          departamentoId: departamentoFinal,
-          nfcUidHash,
-        },
-      });
-
-      if (rol === "EMPLEADO") {
-        await tx.contrato.create({
-          data: {
-            usuarioId: usuario.id,
-            horasSemanales,
-            fechaInicio: new Date(),
-          },
-        });
-      }
-    });
   } catch (error) {
     console.error("Error al crear usuario:", error);
     return { ...emptyError, message: "No se pudo crear el usuario." };
@@ -365,57 +320,18 @@ export async function cambiarEmpresaUsuario(
     return { ...emptyChangeError, message: "Datos incompletos." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true, departamentoId: true, empresaId: true },
-  });
+  const result = await usuarioService.cambiarEmpresaUsuario(usuarioId, empresaId);
 
-  if (!usuario) {
-    return { ...emptyChangeError, message: "Usuario no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "not-found":
+      return { ...emptyChangeError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyChangeError, message: "No se permite en este usuario." };
+    case "invalid-empresa":
+      return { ...emptyChangeError, message: "Empresa invalida." };
   }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyChangeError, message: "No se permite en este usuario." };
-  }
-
-  const empresa = await prisma.empresa.findUnique({
-    where: { id: empresaId },
-    select: { id: true },
-  });
-
-  if (!empresa) {
-    return { ...emptyChangeError, message: "Empresa invalida." };
-  }
-
-  let departamentoId: string | null = usuario.departamentoId ?? null;
-  if (departamentoId) {
-    const departamento = await prisma.departamento.findUnique({
-      where: { id: departamentoId },
-      select: { empresaId: true },
-    });
-    if (!departamento || departamento.empresaId !== empresaId) {
-      departamentoId = null;
-    }
-  }
-
-  if (usuario.rol === "GERENTE") {
-    await prisma.departamento.updateMany({
-      where: { gerenteId: usuarioId, empresaId: { not: empresaId } },
-      data: { gerenteId: null },
-    });
-    await prisma.centroTrabajo.updateMany({
-      where: { gerenteId: usuarioId, empresaId: { not: empresaId } },
-      data: { gerenteId: null },
-    });
-  }
-
-  await prisma.usuario.update({
-    where: { id: usuarioId },
-    data: {
-      empresaId,
-      departamentoId,
-    },
-  });
 
   revalidatePath("/dashboard/empleados");
   revalidatePath("/dashboard/departamentos");
@@ -466,71 +382,24 @@ export async function crearContrato(
     return { ...emptyContratoError, message: "No autorizado." };
   }
 
-  const empleado = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true, empresaId: true },
-  });
-
-  if (!empleado || empleado.rol !== "EMPLEADO") {
-    return { ...emptyContratoError, message: "Empleado invalido." };
-  }
-
-  if (creador.rol === "GERENTE" && creador.empresaId !== empleado.empresaId) {
-    return { ...emptyContratoError, message: "Empleado fuera de tu empresa." };
-  }
-
   try {
-    await prisma.$transaction(async (tx) => {
-      const contratoActivo = await tx.contrato.findFirst({
-        where: { usuarioId, fechaFin: null },
-        orderBy: { fechaInicio: "desc" },
-      });
-
-      if (contratoActivo) {
-        if (fechaInicio.getTime() <= contratoActivo.fechaInicio.getTime()) {
-          const contratoAnterior = await tx.contrato.findFirst({
-            where: { usuarioId, fechaFin: { not: null } },
-            orderBy: { fechaFin: "desc" },
-          });
-
-          if (
-            contratoAnterior?.fechaFin &&
-            fechaInicio.getTime() <= contratoAnterior.fechaFin.getTime()
-          ) {
-            throw new Error(
-              "La fecha de inicio debe ser posterior al fin del contrato anterior.",
-            );
-          }
-
-          await tx.contrato.update({
-            where: { id: contratoActivo.id },
-            data: { fechaInicio, horasSemanales },
-          });
-          return;
-        }
-
-        const fechaFin = new Date(fechaInicio.getTime() - 1);
-        await tx.contrato.update({
-          where: { id: contratoActivo.id },
-          data: { fechaFin },
-        });
-      }
-
-      await tx.contrato.create({
-        data: {
-          usuarioId,
-          horasSemanales,
-          fechaInicio,
-        },
-      });
+    const result = await usuarioService.crearContrato(session.user.id, creador.rol, {
+      empleadoId: usuarioId,
+      horasSemanales,
+      fechaInicio,
     });
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.startsWith("La fecha de inicio debe ser posterior")
-    ) {
-      return { ...emptyContratoError, message: error.message };
+
+    switch (result.outcome) {
+      case "ok":
+        break;
+      case "invalid-employee":
+        return { ...emptyContratoError, message: "Empleado invalido." };
+      case "employee-out-of-scope":
+        return { ...emptyContratoError, message: "Empleado fuera de tu empresa." };
+      case "invalid-start-date":
+        return { ...emptyContratoError, message: result.message };
     }
+  } catch (error) {
     console.error("Error creando contrato:", error);
     return { ...emptyContratoError, message: "No se pudo crear el contrato." };
   }
@@ -576,25 +445,16 @@ export async function resetUsuarioPassword(
     };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true },
-  });
+  const result = await usuarioService.resetPassword(usuarioId, password);
 
-  if (!usuario) {
-    return { ...emptyResetError, message: "Usuario no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "not-found":
+      return { ...emptyResetError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyResetError, message: "No se permite en este usuario." };
   }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyResetError, message: "No se permite en este usuario." };
-  }
-
-  const hashedPassword = await hashPassword(password);
-
-  await prisma.usuario.update({
-    where: { id: usuarioId },
-    data: { password: hashedPassword, passwordMustChange: true },
-  });
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyResetSuccess, message: "Contrasena actualizada." };
@@ -624,83 +484,23 @@ export async function eliminarUsuario(
     return { ...emptyDeleteError, message: "Usuario invalido." };
   }
 
-  if (usuarioId === session.user.id) {
-    return { ...emptyDeleteError, message: "No puedes eliminar tu propia cuenta." };
+  const result = await usuarioService.eliminarUsuario(usuarioId, session.user.id);
+
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "self":
+      return { ...emptyDeleteError, message: "No puedes eliminar tu propia cuenta." };
+    case "not-found":
+      return { ...emptyDeleteError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyDeleteError, message: "No se permite eliminar administradores." };
+    case "has-blockers":
+      return {
+        ...emptyDeleteError,
+        message: `No se puede eliminar: el usuario tiene ${result.blockers.join(", ")} asociados.`,
+      };
   }
-
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: {
-      id: true,
-      rol: true,
-      _count: {
-        select: {
-          fichajes: true,
-          solicitudes: true,
-          solicitudesFichajeEnviadas: true,
-          solicitudesFichajeRecibidas: true,
-          solicitudesFichajeRespondidas: true,
-          passwordResetTokens: true,
-          justificanteAccesos: true,
-          gerenteDepartamentos: true,
-          gerenteCentros: true,
-          contratos: true,
-          exportacionesSolicitadas: true,
-        },
-      },
-    },
-  });
-
-  if (!usuario) {
-    return { ...emptyDeleteError, message: "Usuario no encontrado." };
-  }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyDeleteError, message: "No se permite eliminar administradores." };
-  }
-
-  const blockers: string[] = [];
-  if (usuario._count.fichajes > 0) blockers.push("fichajes");
-  if (usuario._count.solicitudes > 0) blockers.push("solicitudes");
-  if (usuario._count.solicitudesFichajeEnviadas > 0) blockers.push("solicitudes enviadas");
-  if (usuario._count.solicitudesFichajeRecibidas > 0) blockers.push("solicitudes recibidas");
-  if (usuario._count.solicitudesFichajeRespondidas > 0) blockers.push("solicitudes respondidas");
-  if (usuario._count.justificanteAccesos > 0) blockers.push("justificantes");
-
-  if (blockers.length > 0) {
-    return {
-      ...emptyDeleteError,
-      message: `No se puede eliminar: el usuario tiene ${blockers.join(", ")} asociados.`,
-    };
-  }
-
-  await prisma.$transaction(async (tx) => {
-    if (usuario._count.gerenteDepartamentos > 0) {
-      await tx.departamento.updateMany({
-        where: { gerenteId: usuarioId },
-        data: { gerenteId: null },
-      });
-    }
-    if (usuario._count.gerenteCentros > 0) {
-      await tx.centroTrabajo.updateMany({
-        where: { gerenteId: usuarioId },
-        data: { gerenteId: null },
-      });
-    }
-    if (usuario._count.passwordResetTokens > 0) {
-      await tx.passwordResetToken.deleteMany({
-        where: { usuarioId },
-      });
-    }
-    if (usuario._count.contratos > 0) {
-      await tx.contrato.deleteMany({ where: { usuarioId } });
-    }
-    if (usuario._count.exportacionesSolicitadas > 0) {
-      await tx.exportacion.deleteMany({ where: { solicitadoPorId: usuarioId } });
-    }
-
-    await tx.usuario.delete({ where: { id: usuarioId } });
-  });
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyDeleteSuccess, message: "Usuario eliminado." };
@@ -732,48 +532,31 @@ export async function actualizarEstadoUsuario(
     return { ...emptyEstadoError, message: "Usuario invalido." };
   }
 
-  if (usuarioId === session.user.id) {
-    return { ...emptyEstadoError, message: "No puedes dar de baja tu cuenta." };
+  if (accion !== "baja" && accion !== "reactivar") {
+    return { ...emptyEstadoError, message: "Accion invalida." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true, activo: true },
-  });
+  const result = await usuarioService.updateEstado(usuarioId, session.user.id, accion);
 
-  if (!usuario) {
-    return { ...emptyEstadoError, message: "Usuario no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      revalidatePath("/dashboard/empleados");
+      return {
+        ...emptyEstadoSuccess,
+        message: accion === "baja" ? "Usuario dado de baja." : "Usuario reactivado.",
+      };
+    case "self":
+      return { ...emptyEstadoError, message: "No puedes dar de baja tu cuenta." };
+    case "not-found":
+      return { ...emptyEstadoError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyEstadoError, message: "No se permite en este usuario." };
+    case "already-in-state":
+      return {
+        ...emptyEstadoError,
+        message: accion === "baja" ? "El usuario ya esta dado de baja." : "El usuario ya esta activo.",
+      };
   }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyEstadoError, message: "No se permite en este usuario." };
-  }
-
-  if (accion === "baja") {
-    if (!usuario.activo) {
-      return { ...emptyEstadoError, message: "El usuario ya esta dado de baja." };
-    }
-    await prisma.usuario.update({
-      where: { id: usuarioId },
-      data: { activo: false, fechaBaja: new Date() },
-    });
-    revalidatePath("/dashboard/empleados");
-    return { ...emptyEstadoSuccess, message: "Usuario dado de baja." };
-  }
-
-  if (accion === "reactivar") {
-    if (usuario.activo) {
-      return { ...emptyEstadoError, message: "El usuario ya esta activo." };
-    }
-    await prisma.usuario.update({
-      where: { id: usuarioId },
-      data: { activo: true, fechaBaja: null },
-    });
-    revalidatePath("/dashboard/empleados");
-    return { ...emptyEstadoSuccess, message: "Usuario reactivado." };
-  }
-
-  return { ...emptyEstadoError, message: "Accion invalida." };
 }
 
 export async function actualizarEmailUsuario(
@@ -806,32 +589,18 @@ export async function actualizarEmailUsuario(
     return { ...emptyUpdateError, message: "Email invalido." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true },
-  });
+  const result = await usuarioService.updateEmailAdmin(usuarioId, email);
 
-  if (!usuario) {
-    return { ...emptyUpdateError, message: "Usuario no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "not-found":
+      return { ...emptyUpdateError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyUpdateError, message: "No se permite en este usuario." };
+    case "email-taken":
+      return { ...emptyUpdateError, message: "Ese email ya esta en uso." };
   }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyUpdateError, message: "No se permite en este usuario." };
-  }
-
-  const existente = await prisma.usuario.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (existente && existente.id !== usuarioId) {
-    return { ...emptyUpdateError, message: "Ese email ya esta en uso." };
-  }
-
-  await prisma.usuario.update({
-    where: { id: usuarioId },
-    data: { email },
-  });
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyUpdateSuccess, message: "Email actualizado." };
@@ -867,32 +636,20 @@ export async function actualizarDniUsuario(
     return { ...emptyUpdateDniError, message: "DNI/NIE invalido." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { id: true, rol: true },
-  });
+  const result = await usuarioService.updateDniAdmin(usuarioId, dni);
 
-  if (!usuario) {
-    return { ...emptyUpdateDniError, message: "Usuario no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "invalid-dni":
+      return { ...emptyUpdateDniError, message: "DNI/NIE invalido." };
+    case "not-found":
+      return { ...emptyUpdateDniError, message: "Usuario no encontrado." };
+    case "forbidden-target":
+      return { ...emptyUpdateDniError, message: "No se permite en este usuario." };
+    case "dni-taken":
+      return { ...emptyUpdateDniError, message: "Ese DNI/NIE ya esta en uso." };
   }
-
-  if (usuario.rol === "ADMIN_SISTEMA") {
-    return { ...emptyUpdateDniError, message: "No se permite en este usuario." };
-  }
-
-  const existente = await prisma.usuario.findUnique({
-    where: { dni },
-    select: { id: true },
-  });
-
-  if (existente && existente.id !== usuarioId) {
-    return { ...emptyUpdateDniError, message: "Ese DNI/NIE ya esta en uso." };
-  }
-
-  await prisma.usuario.update({
-    where: { id: usuarioId },
-    data: { dni },
-  });
 
   revalidatePath("/dashboard/empleados");
   return { ...emptyUpdateDniSuccess, message: "DNI actualizado." };

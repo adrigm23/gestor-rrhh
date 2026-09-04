@@ -8,6 +8,7 @@ import {
   sanitizeFormDataString,
   sanitizeString,
 } from "../utils/input";
+import { empresaService } from "../../services/empresa";
 
 export type EmpresaState = {
   status: "idle" | "error" | "success";
@@ -67,30 +68,17 @@ export async function crearEmpresa(
     return { ...emptyError, message: "CIF invalido." };
   }
 
-  const existente = await prisma.empresa.findFirst({
-    where: {
-      OR: [
-        { cif },
-        { nombre: { equals: nombre, mode: "insensitive" } },
-      ],
-    },
-    select: { id: true, cif: true, nombre: true },
-  });
-
-  if (existente) {
-    if (existente.cif === cif) {
-      return { ...emptyError, message: "Ese CIF ya esta registrado." };
-    }
-    return { ...emptyError, message: "Ya existe una empresa con ese nombre." };
-  }
-
   try {
-    await prisma.empresa.create({
-      data: {
-        nombre,
-        cif,
-      },
-    });
+    const result = await empresaService.crearEmpresa({ nombre, cif });
+
+    switch (result.outcome) {
+      case "ok":
+        break;
+      case "cif-duplicado":
+        return { ...emptyError, message: "Ese CIF ya esta registrado." };
+      case "nombre-duplicado":
+        return { ...emptyError, message: "Ya existe una empresa con ese nombre." };
+    }
   } catch (error) {
     console.error("Error al crear empresa:", error);
     return { ...emptyError, message: "No se pudo crear la empresa." };
@@ -128,45 +116,26 @@ export async function eliminarEmpresa(
     return { ...emptyDeleteError, message: "Empresa invalida." };
   }
 
-  const empresa = await prisma.empresa.findUnique({
-    where: { id: empresaId },
-    select: {
-      id: true,
-      _count: {
-        select: { usuarios: true, departamentos: true, centrosTrabajo: true },
-      },
-    },
-  });
-
-  if (!empresa) {
-    return { ...emptyDeleteError, message: "Empresa no encontrada." };
-  }
-
-  const admins = await prisma.usuario.count({
-    where: { empresaId, rol: "ADMIN_SISTEMA" },
-  });
-
-  if (admins > 0) {
-    return {
-      ...emptyDeleteError,
-      message: "No se puede eliminar: hay administradores asociados.",
-    };
-  }
-
-  if (
-    empresa._count.usuarios > 0 ||
-    empresa._count.departamentos > 0 ||
-    empresa._count.centrosTrabajo > 0
-  ) {
-    return {
-      ...emptyDeleteError,
-      message:
-        "No se puede eliminar: hay usuarios, departamentos o centros asociados.",
-    };
-  }
-
   try {
-    await prisma.empresa.delete({ where: { id: empresaId } });
+    const result = await empresaService.eliminarEmpresa(empresaId);
+
+    switch (result.outcome) {
+      case "ok":
+        break;
+      case "not-found":
+        return { ...emptyDeleteError, message: "Empresa no encontrada." };
+      case "has-admins":
+        return {
+          ...emptyDeleteError,
+          message: "No se puede eliminar: hay administradores asociados.",
+        };
+      case "has-blockers":
+        return {
+          ...emptyDeleteError,
+          message:
+            "No se puede eliminar: hay usuarios, departamentos o centros asociados.",
+        };
+    }
   } catch (error) {
     console.error("Error al eliminar empresa:", error);
     return { ...emptyDeleteError, message: "No se pudo eliminar la empresa." };
@@ -189,6 +158,17 @@ export async function actualizarPausaEmpresa(
     return { ...emptyConfigError, message: "No autorizado." };
   }
 
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { rol: true },
+  });
+
+  // Se expone desde dos sitios: dashboard/empresas (ADMIN_SISTEMA, sobre
+  // cualquier empresa) y dashboard/ajustes (GERENTE, solo sobre la suya).
+  if (!usuario || (usuario.rol !== "ADMIN_SISTEMA" && usuario.rol !== "GERENTE")) {
+    return { ...emptyConfigError, message: "No autorizado." };
+  }
+
   const empresaId = sanitizeFormDataId(formData, "empresaId");
   const valorRaw =
     sanitizeFormDataString(formData, "pausaCuenta").toLowerCase() || "true";
@@ -201,30 +181,17 @@ export async function actualizarPausaEmpresa(
     return { ...emptyConfigError, message: "Empresa invalida." };
   }
 
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: session.user.id },
-    select: { rol: true, empresaId: true },
+  const result = await empresaService.actualizarConfig(session.user.id, usuario.rol, empresaId, {
+    pausaCuentaComoTrabajo: pausaCuenta,
+    geolocalizacionFichaje,
   });
 
-  if (!usuario) {
+  if (result.outcome === "not-found") {
+    return { ...emptyConfigError, message: "Empresa invalida." };
+  }
+  if (result.outcome === "forbidden") {
     return { ...emptyConfigError, message: "No autorizado." };
   }
-
-  if (usuario.rol === "GERENTE" && usuario.empresaId !== empresaId) {
-    return { ...emptyConfigError, message: "No autorizado." };
-  }
-
-  if (usuario.rol !== "ADMIN_SISTEMA" && usuario.rol !== "GERENTE") {
-    return { ...emptyConfigError, message: "No autorizado." };
-  }
-
-  await prisma.empresa.update({
-    where: { id: empresaId },
-    data: {
-      pausaCuentaComoTrabajo: pausaCuenta,
-      geolocalizacionFichaje,
-    },
-  });
 
   revalidatePath("/dashboard/empresas");
   revalidatePath("/dashboard/ajustes");

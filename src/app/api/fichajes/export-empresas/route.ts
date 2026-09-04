@@ -1,11 +1,18 @@
 import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../../auth/auth";
 import { prisma } from "../../../lib/prisma";
+import { rateLimitService } from "../../../../services/rate-limit";
 import {
   sanitizeId,
   sanitizeString,
   sanitizeUrlSearchParam,
 } from "../../../utils/input";
+
+// Auditoría de seguridad (Fase 2.19, hallazgo #11): igual que export/route.ts
+// — sin límite, hasta 25000 filas por petición, con el pool de Prisma a una
+// sola conexión en producción.
+const EXPORT_LIMIT = 10;
+const EXPORT_WINDOW_SECONDS = 60;
 
 const parseDate = (value: string | null, endOfDay: boolean) => {
   if (!value) return null;
@@ -73,6 +80,20 @@ export async function GET(request: Request) {
   const role = session.user?.role ?? "";
   if (role === "EMPLEADO") {
     return new Response("No autorizado", { status: 403 });
+  }
+
+  const limitResult = await rateLimitService.check(
+    `export:user:${session.user.id}`,
+    EXPORT_LIMIT,
+    EXPORT_WINDOW_SECONDS,
+  );
+  if (!limitResult.allowed) {
+    return new Response("Demasiadas exportaciones, espera un momento", {
+      status: 429,
+      headers: limitResult.retryAfterSeconds
+        ? { "Retry-After": String(limitResult.retryAfterSeconds) }
+        : undefined,
+    });
   }
 
   const { searchParams } = new URL(request.url);

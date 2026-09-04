@@ -1,68 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import ThemeToggle from "../components/theme-toggle";
+import NotificationBell from "./notification-bell";
+import type { DashboardNotificationSummary } from "./notification-types";
 
 type HeaderActionsProps = {
   userName: string;
+  notificationSummary: DashboardNotificationSummary;
   onMenuClick?: () => void;
 };
 
 export default function HeaderActions({
   userName,
+  notificationSummary,
   onMenuClick,
 }: HeaderActionsProps) {
-  const [open, setOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handleClick = (event: PointerEvent) => {
-      if (!popoverRef.current) return;
-      if (!popoverRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
-
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-4 text-sm text-[color:var(--text-secondary)] sm:px-6 md:justify-end md:px-10 md:py-6">
       <span className="truncate font-medium text-[color:var(--text-primary)]">
         {userName}
       </span>
-      <div className="relative" ref={popoverRef}>
-        <button
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          className="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
-          aria-label="Notificaciones"
-          aria-expanded={open}
-          aria-controls="notificaciones-panel"
-        >
-          <Bell size={18} />
-        </button>
-        {open && (
-          <div
-            id="notificaciones-panel"
-            className="fixed left-1/2 top-16 z-30 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-[color:var(--card-border)] bg-[color:var(--card)] p-4 text-xs text-[color:var(--text-secondary)] shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-72 sm:translate-x-0"
-            role="dialog"
-            aria-label="Notificaciones"
-          >
-            <p className="text-sm font-semibold text-[color:var(--text-primary)]">
-              Notificaciones
-            </p>
-            <p className="mt-2 text-[color:var(--text-muted)]">
-              No tienes notificaciones nuevas.
-            </p>
-          </div>
-        )}
-      </div>
+      <NotificationBell
+        summary={notificationSummary}
+        panelId="notificaciones-panel"
+        buttonClassName="rounded-full border border-[color:var(--card-border)] bg-[color:var(--surface)] p-2 text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+      />
       <ThemeToggle className="hidden sm:inline-flex" />
       <button
         type="button"

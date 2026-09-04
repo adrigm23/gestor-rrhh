@@ -1,16 +1,13 @@
 "use server";
 
-import { Prisma, TipoFichaje } from "@prisma/client";
 import { auth } from "../api/auth/auth";
-import { prisma } from "../lib/prisma";
-import { createSignedUrl, uploadExportCsv } from "../lib/supabase-storage";
-import { formatAppDateTime } from "../utils/datetime";
 import {
   sanitizeFormDataId,
   sanitizeFormDataString,
-  sanitizeId,
-  sanitizeString,
 } from "../utils/input";
+import { exportService, type ExportacionStatus, type Rol } from "../../services/export";
+
+export type { ExportacionStatus };
 
 export type ExportacionState = {
   status: "idle" | "error" | "success";
@@ -18,397 +15,8 @@ export type ExportacionState = {
   jobId?: string;
 };
 
-export type ExportacionStatus = {
-  status: "PENDIENTE" | "GENERANDO" | "LISTO" | "ERROR";
-  url?: string | null;
-  error?: string | null;
-};
-
 const emptySuccess: ExportacionState = { status: "success" };
 const emptyError: ExportacionState = { status: "error" };
-const MAX_EXPORT_ROWS = 25000;
-const runningExportJobs = new Set<string>();
-const EXPORT_BUCKET =
-  process.env.SUPABASE_EXPORT_BUCKET ??
-  process.env.SUPABASE_STORAGE_BUCKET ??
-  "justificantes";
-
-const parseDate = (value: string | null, endOfDay: boolean) => {
-  if (!value) return null;
-  const suffix = endOfDay ? "T23:59:59" : "T00:00:00";
-  const date = new Date(`${value}${suffix}`);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const formatTipo = (tipo: string) => {
-  switch (tipo) {
-    case "PAUSA_COMIDA":
-      return "Pausa comida";
-    case "DESCANSO":
-      return "Descanso";
-    case "MEDICO":
-      return "Medico";
-    default:
-      return "Jornada";
-  }
-};
-
-const formatDuration = (entrada: Date, salida?: Date | null) => {
-  if (!salida) return "En curso";
-  const diffMs = Math.max(0, salida.getTime() - entrada.getTime());
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const padded = (value: number) => value.toString().padStart(2, "0");
-  return `${padded(hours)}:${padded(minutes)} Hrs`;
-};
-
-const escapeCsv = (value: string) => {
-  const raw = String(value);
-  const guarded = /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
-  const needsEscape =
-    guarded.includes(",") || guarded.includes("\"") || guarded.includes("\n");
-  if (!needsEscape) return guarded;
-  return `"${guarded.replace(/"/g, "\"\"")}"`;
-};
-
-type ExportFilters = {
-  from?: string;
-  to?: string;
-  estado?: string;
-  tipo?: string;
-  empresaId?: string;
-  empleadoId?: string;
-};
-
-const sanitizeFilenamePart = (value: string | undefined, fallback: string) => {
-  const cleaned = sanitizeString(value, { maxLength: 32 }).replace(
-    /[^a-zA-Z0-9_-]/g,
-    "",
-  );
-  return cleaned || fallback;
-};
-
-const buildWhereClause = (filters: ExportFilters, empresaId?: string | null) => {
-  const fromParam = sanitizeString(filters.from ?? null, { maxLength: 10 }) || null;
-  const toParam = sanitizeString(filters.to ?? null, { maxLength: 10 }) || null;
-  const estadoRaw = sanitizeString(filters.estado ?? "todos").toLowerCase();
-  const estadoParam =
-    estadoRaw === "abierto" || estadoRaw === "cerrado" ? estadoRaw : "todos";
-  const tipoParam = sanitizeString(filters.tipo ?? "todos").toUpperCase();
-  const empleadoParam = sanitizeId(filters.empleadoId ?? "");
-
-  let desde = parseDate(fromParam, false);
-  let hasta = parseDate(toParam, true);
-  if (desde && hasta && hasta < desde) {
-    const temp = desde;
-    desde = hasta;
-    hasta = temp;
-  }
-
-  const whereClause: Prisma.FichajeWhereInput = {};
-
-  if (empresaId) {
-    whereClause.usuario = { empresaId };
-  }
-
-  if (empleadoParam) {
-    whereClause.usuarioId = empleadoParam;
-  }
-
-  if (desde || hasta) {
-    whereClause.entrada = {
-      ...(desde ? { gte: desde } : {}),
-      ...(hasta ? { lte: hasta } : {}),
-    };
-  }
-
-  if (estadoParam === "abierto") {
-    whereClause.salida = { equals: null };
-  } else if (estadoParam === "cerrado") {
-    whereClause.salida = { not: null };
-  }
-
-  if (tipoParam && tipoParam !== "TODOS") {
-    const allowed: TipoFichaje[] = [
-      "JORNADA",
-      "PAUSA_COMIDA",
-      "DESCANSO",
-      "MEDICO",
-    ];
-    if (allowed.includes(tipoParam as TipoFichaje)) {
-      whereClause.tipo = tipoParam as TipoFichaje;
-    }
-  }
-
-  return { whereClause, desde, hasta, estadoParam, tipoParam };
-};
-
-const buildEmpresaResumen = (items: {
-  entrada: Date;
-  salida: Date | null;
-  editado: boolean;
-  usuarioId: string;
-  usuario: { empresa: { id: string; nombre: string; cif: string } | null };
-}[]) => {
-  const resumen = new Map<
-    string,
-    {
-      id: string;
-      nombre: string;
-      cif: string;
-      total: number;
-      abiertos: number;
-      cerrados: number;
-      editados: number;
-      minutos: number;
-      empleados: Set<string>;
-    }
-  >();
-
-  const diffMinutes = (entrada: Date, salida?: Date | null) => {
-    if (!salida) return 0;
-    const diffMs = Math.max(0, salida.getTime() - entrada.getTime());
-    return Math.floor(diffMs / 60000);
-  };
-
-  for (const fichaje of items) {
-    const empresa = fichaje.usuario.empresa;
-    if (!empresa) continue;
-
-    let item = resumen.get(empresa.id);
-    if (!item) {
-      item = {
-        id: empresa.id,
-        nombre: empresa.nombre,
-        cif: empresa.cif,
-        total: 0,
-        abiertos: 0,
-        cerrados: 0,
-        editados: 0,
-        minutos: 0,
-        empleados: new Set<string>(),
-      };
-      resumen.set(empresa.id, item);
-    }
-
-    item.total += 1;
-    if (fichaje.salida) {
-      item.cerrados += 1;
-      item.minutos += diffMinutes(fichaje.entrada, fichaje.salida);
-    } else {
-      item.abiertos += 1;
-    }
-
-    if (fichaje.editado) {
-      item.editados += 1;
-    }
-
-    if (fichaje.usuarioId) {
-      item.empleados.add(fichaje.usuarioId);
-    }
-  }
-
-  const formatTotalMinutes = (totalMinutes: number) => {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const padded = (value: number) => value.toString().padStart(2, "0");
-    return `${padded(hours)}:${padded(minutes)} Hrs`;
-  };
-
-  return [...resumen.values()]
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
-    .map((item) => {
-      const values = [
-        item.nombre,
-        item.cif,
-        String(item.empleados.size),
-        String(item.total),
-        String(item.abiertos),
-        String(item.cerrados),
-        String(item.editados),
-        formatTotalMinutes(item.minutos),
-      ];
-      return values.map((value) => escapeCsv(String(value))).join(",");
-    });
-};
-
-const runExportJob = async (jobId: string) => {
-  const safeJobId = sanitizeId(jobId);
-  if (!safeJobId) return;
-
-  try {
-    const job = await prisma.exportacion.findUnique({
-      where: { id: safeJobId },
-      select: {
-        id: true,
-        tipo: true,
-        estado: true,
-        filtros: true,
-        empresaId: true,
-        empleadoId: true,
-        solicitadoPorId: true,
-      },
-    });
-
-    if (!job || job.estado === "LISTO") return;
-
-    await prisma.exportacion.update({
-      where: { id: safeJobId },
-      data: { estado: "GENERANDO", error: null },
-    });
-
-    const user = await prisma.usuario.findUnique({
-      where: { id: job.solicitadoPorId },
-      select: { rol: true, empresaId: true },
-    });
-
-    if (!user || user.rol === "EMPLEADO") {
-      throw new Error("No autorizado");
-    }
-
-    const filtros = (job.filtros ?? {}) as ExportFilters;
-
-    const empresaFiltro =
-      user.rol === "GERENTE" ? user.empresaId ?? "" : job.empresaId ?? "";
-
-    if (job.tipo === "FICHAJES" && !empresaFiltro) {
-      throw new Error("Empresa requerida para exportar fichajes.");
-    }
-
-    if (job.tipo === "FICHAJES") {
-      const { whereClause } = buildWhereClause(filtros, empresaFiltro);
-
-      const fichajes = await prisma.fichaje.findMany({
-        where: whereClause,
-        include: {
-          usuario: {
-            select: {
-              nombre: true,
-              email: true,
-              empresa: { select: { nombre: true } },
-            },
-          },
-        },
-        orderBy: { entrada: "desc" },
-        take: MAX_EXPORT_ROWS + 1,
-      });
-
-      if (fichajes.length > MAX_EXPORT_ROWS) {
-        throw new Error(
-          `Demasiados registros para exportar (maximo ${MAX_EXPORT_ROWS}). Acota los filtros.`,
-        );
-      }
-
-      const header = [
-        "Empleado",
-        "Email",
-        "Empresa",
-        "Entrada",
-        "Salida",
-        "Tiempo",
-        "Tipo",
-        "Estado",
-        "Editado",
-        "Motivo",
-      ].join(",");
-
-      const rows = fichajes.map((item) => {
-        const values = [
-          item.usuario.nombre,
-          item.usuario.email,
-          item.usuario.empresa?.nombre ?? "",
-          formatAppDateTime(item.entrada),
-          item.salida ? formatAppDateTime(item.salida) : "En curso",
-          formatDuration(item.entrada, item.salida),
-          formatTipo(item.tipo),
-          item.salida ? "Cerrado" : "Abierto",
-          item.editado ? "Si" : "No",
-          item.motivoEdicion ?? "",
-        ];
-        return values.map((value) => escapeCsv(String(value))).join(",");
-      });
-
-      const csv = [header, ...rows].join("\n");
-      const filename = `exports/${job.id}/fichajes-${sanitizeFilenamePart(filtros.from, "inicio")}-${sanitizeFilenamePart(filtros.to, "fin")}.csv`;
-
-      await uploadExportCsv(csv, filename);
-
-      await prisma.exportacion.update({
-        where: { id: job.id },
-        data: { estado: "LISTO", archivoRuta: filename },
-      });
-      return;
-    }
-
-    const { whereClause } = buildWhereClause(filtros, empresaFiltro);
-
-    const fichajes = await prisma.fichaje.findMany({
-      where: whereClause,
-      select: {
-        entrada: true,
-        salida: true,
-        editado: true,
-        usuarioId: true,
-        usuario: {
-          select: {
-            empresa: { select: { id: true, nombre: true, cif: true } },
-          },
-        },
-      },
-      orderBy: { entrada: "desc" },
-      take: MAX_EXPORT_ROWS + 1,
-    });
-
-    if (fichajes.length > MAX_EXPORT_ROWS) {
-      throw new Error(
-        `Demasiados registros para exportar (maximo ${MAX_EXPORT_ROWS}). Acota los filtros.`,
-      );
-    }
-
-    const header = [
-      "Empresa",
-      "CIF",
-      "Empleados",
-      "Fichajes",
-      "Abiertos",
-      "Cerrados",
-      "Editados",
-      "Tiempo total",
-    ].join(",");
-
-    const rows = buildEmpresaResumen(fichajes);
-
-    const csv = [header, ...rows].join("\n");
-    const filename = `exports/${job.id}/fichajes-empresas-${sanitizeFilenamePart(filtros.from, "inicio")}-${sanitizeFilenamePart(filtros.to, "fin")}.csv`;
-
-    await uploadExportCsv(csv, filename);
-
-    await prisma.exportacion.update({
-      where: { id: job.id },
-      data: { estado: "LISTO", archivoRuta: filename },
-    });
-  } catch (error) {
-    await prisma.exportacion.update({
-      where: { id: safeJobId },
-      data: {
-        estado: "ERROR",
-        error: error instanceof Error ? error.message : "Error desconocido",
-      },
-    });
-  }
-};
-
-const ensureExportJobProgress = async (jobId: string) => {
-  const safeJobId = sanitizeId(jobId);
-  if (!safeJobId || runningExportJobs.has(safeJobId)) return;
-  runningExportJobs.add(safeJobId);
-  try {
-    await runExportJob(safeJobId);
-  } finally {
-    runningExportJobs.delete(safeJobId);
-  }
-};
 
 export async function crearExportacion(
   _prevState: ExportacionState,
@@ -420,14 +28,14 @@ export async function crearExportacion(
     return { ...emptyError, message: "No autorizado." };
   }
 
-  const tipo = sanitizeFormDataString(formData, "tipo").toUpperCase() || "FICHAJES";
-  if (tipo !== "FICHAJES" && tipo !== "FICHAJES_EMPRESAS") {
-    return { ...emptyError, message: "Tipo invalido." };
-  }
-
   const role = session.user?.role ?? "";
   if (role === "EMPLEADO") {
     return { ...emptyError, message: "No autorizado." };
+  }
+
+  const tipo = sanitizeFormDataString(formData, "tipo").toUpperCase() || "FICHAJES";
+  if (tipo !== "FICHAJES" && tipo !== "FICHAJES_EMPRESAS") {
+    return { ...emptyError, message: "Tipo invalido." };
   }
 
   const empresaIdForm = sanitizeFormDataId(formData, "empresaId");
@@ -437,123 +45,44 @@ export async function crearExportacion(
   const estado = sanitizeFormDataString(formData, "estado").toLowerCase();
   const tipoFiltro = sanitizeFormDataString(formData, "tipoFiltro");
 
-  const filtros: ExportFilters = {
-    from: from || undefined,
-    to: to || undefined,
-    estado: estado || "todos",
-    tipo: tipoFiltro || "todos",
-    empresaId: empresaIdForm || undefined,
-    empleadoId: empleadoId || undefined,
-  };
+  const result = await exportService.crearExportacion(session.user.id, role as Rol, {
+    tipo,
+    filtros: {
+      from: from || undefined,
+      to: to || undefined,
+      estado: estado || "todos",
+      tipo: tipoFiltro || "todos",
+      empresaId: empresaIdForm || undefined,
+      empleadoId: empleadoId || undefined,
+    },
+    empresaIdForm,
+  });
 
-  const empresaId =
-    role === "GERENTE" ? session.user.empresaId ?? "" : empresaIdForm;
-
-  if (tipo === "FICHAJES" && !empresaId) {
-    return { ...emptyError, message: "Selecciona una empresa." };
-  }
-
-  if (empresaId) {
-    const empresa = await prisma.empresa.findUnique({
-      where: { id: empresaId },
-      select: { id: true },
-    });
-    if (!empresa) {
+  switch (result.outcome) {
+    case "ok":
+      return { ...emptySuccess, jobId: result.jobId };
+    case "invalid-tipo":
+      return { ...emptyError, message: "Tipo invalido." };
+    case "empresa-requerida":
+      return { ...emptyError, message: "Selecciona una empresa." };
+    case "invalid-empresa":
       return { ...emptyError, message: "Empresa invalida." };
-    }
-  }
-
-  if (empleadoId) {
-    const empleado = await prisma.usuario.findUnique({
-      where: { id: empleadoId },
-      select: { id: true, empresaId: true },
-    });
-    if (!empleado) {
+    case "invalid-empleado":
       return { ...emptyError, message: "Empleado invalido." };
-    }
-    if (empresaId && empleado.empresaId !== empresaId) {
+    case "empleado-fuera-de-empresa":
       return {
         ...emptyError,
         message: "El empleado no pertenece a la empresa seleccionada.",
       };
-    }
   }
-
-  const job = await prisma.exportacion.create({
-    data: {
-      tipo,
-      estado: "PENDIENTE",
-      solicitadoPorId: session.user.id,
-      empresaId: empresaId || null,
-      empleadoId: empleadoId || null,
-      filtros,
-    },
-    select: { id: true },
-  });
-
-  void ensureExportJobProgress(job.id);
-
-  return { ...emptySuccess, jobId: job.id };
 }
 
 export async function obtenerExportacion(jobId: string): Promise<ExportacionStatus> {
-  const safeJobId = sanitizeId(jobId);
-  if (!safeJobId) {
-    return { status: "ERROR", error: "Exportacion no encontrada" };
-  }
-
   const session = await auth();
 
   if (!session?.user?.id) {
     return { status: "ERROR", error: "No autorizado" };
   }
 
-  const job = await prisma.exportacion.findUnique({
-    where: { id: safeJobId },
-    select: {
-      estado: true,
-      archivoRuta: true,
-      error: true,
-      solicitadoPorId: true,
-      empresaId: true,
-    },
-  });
-
-  if (!job) {
-    return { status: "ERROR", error: "Exportacion no encontrada" };
-  }
-
-  if (job.solicitadoPorId !== session.user.id) {
-    return { status: "ERROR", error: "No autorizado" };
-  }
-
-  if (job.estado === "PENDIENTE" || job.estado === "GENERANDO") {
-    await ensureExportJobProgress(safeJobId);
-    const refreshed = await prisma.exportacion.findUnique({
-      where: { id: safeJobId },
-      select: { estado: true, archivoRuta: true, error: true },
-    });
-
-    if (!refreshed) {
-      return { status: "ERROR", error: "Exportacion no encontrada" };
-    }
-
-    if (refreshed.estado === "LISTO" && refreshed.archivoRuta) {
-      const url = await createSignedUrl(
-        refreshed.archivoRuta,
-        900,
-        EXPORT_BUCKET,
-      );
-      return { status: "LISTO", url };
-    }
-
-    return { status: refreshed.estado, error: refreshed.error ?? null };
-  }
-
-  if (job.estado === "LISTO" && job.archivoRuta) {
-    const url = await createSignedUrl(job.archivoRuta, 900, EXPORT_BUCKET);
-    return { status: "LISTO", url };
-  }
-
-  return { status: job.estado, error: job.error ?? null };
+  return exportService.obtenerExportacion(session.user.id, jobId);
 }

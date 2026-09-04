@@ -1,9 +1,10 @@
-import { Prisma, TipoFichaje } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
 import { formatAppDate, formatAppTime } from "../../utils/datetime";
 import { sanitizeId, sanitizeParam } from "../../utils/input";
+import { fichajesEmpresaService, type TipoFichaje } from "../../../services/fichajes-empresa";
+import { usuarioService } from "../../../services/usuario";
 import ExportAsyncPanel from "./export-async-panel";
 
 export const dynamic = "force-dynamic";
@@ -105,12 +106,9 @@ export default async function FichajesPage({
     hasta = temp;
   }
 
-  const empresas = isAdmin
-    ? await prisma.empresa.findMany({
-        select: { id: true, nombre: true },
-        orderBy: { nombre: "asc" },
-      })
-    : [];
+  const actorRole: "GERENTE" | "ADMIN_SISTEMA" = isAdmin ? "ADMIN_SISTEMA" : "GERENTE";
+
+  const empresas = isAdmin ? await usuarioService.listEmpresasOptions() : [];
 
   const empresaNombre = empresaFiltro
     ? isAdmin
@@ -126,75 +124,22 @@ export default async function FichajesPage({
       : "Empresa asignada";
 
   const empleados = empresaFiltro
-    ? await prisma.usuario.findMany({
-        where: { rol: "EMPLEADO", empresaId: empresaFiltro },
-        select: { id: true, nombre: true, email: true },
-        orderBy: { nombre: "asc" },
-      })
+    ? await fichajesEmpresaService.listEmpleadosPorEmpresa(session.user?.id ?? "", actorRole, empresaFiltro)
     : [];
 
-  const whereClause: Prisma.FichajeWhereInput = {};
+  // Igual que antes: un valor de tipo inválido se trata como "todos" (sin
+  // filtrar), no como "sin resultados".
+  const tipoFiltro: TipoFichaje | "todos" =
+    tipoParam !== "todos" ? toTipoFichaje(tipoParam.toUpperCase()) ?? "todos" : "todos";
 
-  if (empresaFiltro) {
-    whereClause.usuario = { empresaId: empresaFiltro };
-  }
-
-  if (empleadoParam) {
-    whereClause.usuarioId = empleadoParam;
-  }
-
-  if (desde || hasta) {
-    whereClause.entrada = {
-      ...(desde ? { gte: desde } : {}),
-      ...(hasta ? { lte: hasta } : {}),
-    };
-  }
-
-  if (estadoParam === "abierto") {
-    whereClause.salida = { equals: null };
-  } else if (estadoParam === "cerrado") {
-    whereClause.salida = { not: null };
-  }
-
-  if (tipoParam !== "todos") {
-    const tipo = toTipoFichaje(tipoParam.toUpperCase());
-    if (tipo) {
-      whereClause.tipo = tipo;
-    }
-  }
-
-  type FichajeConUsuario = Prisma.FichajeGetPayload<{
-    include: {
-      usuario: {
-        select: {
-          nombre: true;
-          email: true;
-          empresa: { select: { nombre: true } };
-        };
-      };
-    };
-  }>;
-
-  const fichajes: FichajeConUsuario[] = canQuery
-    ? await prisma.fichaje.findMany({
-        where: whereClause,
-        include: {
-          usuario: {
-            select: {
-              nombre: true,
-              email: true,
-              empresa: { select: { nombre: true } },
-            },
-          },
-        },
-        orderBy: { entrada: "desc" },
-        take: 200,
-      })
-    : [];
-
-  const total = canQuery
-    ? await prisma.fichaje.count({ where: whereClause })
-    : 0;
+  const { fichajes, total } = await fichajesEmpresaService.listFichajes(session.user?.id ?? "", actorRole, {
+    empresaId: empresaFiltro || undefined,
+    empleadoId: empleadoParam || undefined,
+    estado: estadoParam === "abierto" || estadoParam === "cerrado" ? estadoParam : "todos",
+    tipo: tipoFiltro,
+    desde: desde ?? undefined,
+    hasta: hasta ?? undefined,
+  });
 
   const exportFilters = {
     from: fromParam,
@@ -441,9 +386,9 @@ export default async function FichajesPage({
                   {fichajes.map((fichaje) => (
                     <tr key={fichaje.id} className="text-[color:var(--text-secondary)]">
                       <td className="px-4 py-3 font-semibold text-[color:var(--text-primary)]">
-                        <div>{fichaje.usuario.nombre}</div>
+                        <div>{fichaje.empleadoNombre}</div>
                         <div className="text-xs text-[color:var(--text-muted)]">
-                          {fichaje.usuario.email}
+                          {fichaje.empleadoEmail}
                         </div>
                       </td>
                       <td className="px-4 py-3">

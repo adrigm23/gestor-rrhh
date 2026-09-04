@@ -2,10 +2,10 @@
 "use server";
 
 import { auth } from "../api/auth/auth";
-import { prisma } from "../lib/prisma";
-import { getApprovedLeaveType } from "../lib/vacaciones";
 import { revalidatePath } from "next/cache";
 import { sanitizeString } from "../utils/input";
+import { fichajeService } from "../../services/fichaje";
+import type { FichajeCoordinates } from "../../services/fichaje";
 
 const parseCoord = (value: FormDataEntryValue | null) => {
   const sanitized = sanitizeString(value, { maxLength: 32 });
@@ -14,85 +14,29 @@ const parseCoord = (value: FormDataEntryValue | null) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const parseCoords = (formData?: FormData): FichajeCoordinates | undefined => {
+  const latitude = parseCoord(formData?.get("latitud") ?? null);
+  const longitude = parseCoord(formData?.get("longitud") ?? null);
+  if (latitude === null || longitude === null) return undefined;
+  return { latitude, longitude };
+};
+
 export async function toggleFichaje(formData?: FormData) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     throw new Error("No autorizado");
   }
 
   const userId = session.user.id;
-  const MAX_RETRIES = 2;
-  const latitud = parseCoord(formData?.get("latitud") ?? null);
-  const longitud = parseCoord(formData?.get("longitud") ?? null);
-  const hasCoords = latitud !== null && longitud !== null;
+  const coords = parseCoords(formData);
 
-  if (await getApprovedLeaveType(userId)) {
+  const result = await fichajeService.toggleFichaje(userId, coords);
+
+  if (result.outcome === "blocked-by-leave") {
     return;
   }
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      await prisma.$transaction(
-        async (tx) => {
-          const ultimoFichaje = await tx.fichaje.findFirst({
-            where: {
-              usuarioId: userId,
-              salida: null,
-              tipo: "JORNADA",
-            },
-            orderBy: { entrada: "desc" },
-          });
-
-          if (ultimoFichaje) {
-            const pausaActiva = await tx.fichaje.findFirst({
-              where: {
-                usuarioId: userId,
-                salida: null,
-                tipo: "PAUSA_COMIDA",
-              },
-              orderBy: { entrada: "desc" },
-            });
-
-            if (pausaActiva) {
-              await tx.fichaje.update({
-                where: { id: pausaActiva.id },
-                data: { salida: new Date() },
-              });
-            }
-
-            await tx.fichaje.update({
-              where: { id: ultimoFichaje.id },
-              data: {
-                salida: new Date(),
-                ...(hasCoords
-                  ? { latitudSalida: latitud, longitudSalida: longitud }
-                  : {}),
-              },
-            });
-            return;
-          }
-
-          await tx.fichaje.create({
-            data: {
-              usuarioId: userId,
-              entrada: new Date(),
-              tipo: "JORNADA",
-              ...(hasCoords ? { latitud, longitud } : {}),
-            },
-          });
-        },
-        { isolationLevel: "Serializable" },
-      );
-      break;
-    } catch (error) {
-      const code = (error as { code?: string }).code;
-      if (code == "P2034" && attempt < MAX_RETRIES) {
-        continue;
-      }
-      throw error;
-    }
-  }
   revalidatePath("/dashboard");
 }
 
@@ -104,64 +48,11 @@ export async function togglePausa() {
   }
 
   const userId = session.user.id;
-  const MAX_RETRIES = 2;
 
-  if (await getApprovedLeaveType(userId)) {
+  const result = await fichajeService.togglePausa(userId);
+
+  if (result.outcome === "blocked-by-leave") {
     return;
-  }
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      await prisma.$transaction(
-        async (tx) => {
-          const jornadaActiva = await tx.fichaje.findFirst({
-            where: {
-              usuarioId: userId,
-              salida: null,
-              tipo: "JORNADA",
-            },
-            orderBy: { entrada: "desc" },
-          });
-
-          if (!jornadaActiva) {
-            return;
-          }
-
-          const pausaActiva = await tx.fichaje.findFirst({
-            where: {
-              usuarioId: userId,
-              salida: null,
-              tipo: "PAUSA_COMIDA",
-            },
-            orderBy: { entrada: "desc" },
-          });
-
-          if (pausaActiva) {
-            await tx.fichaje.update({
-              where: { id: pausaActiva.id },
-              data: { salida: new Date() },
-            });
-            return;
-          }
-
-          await tx.fichaje.create({
-            data: {
-              usuarioId: userId,
-              entrada: new Date(),
-              tipo: "PAUSA_COMIDA",
-            },
-          });
-        },
-        { isolationLevel: "Serializable" },
-      );
-      break;
-    } catch (error) {
-      const code = (error as { code?: string }).code;
-      if (code == "P2034" && attempt < MAX_RETRIES) {
-        continue;
-      }
-      throw error;
-    }
   }
 
   revalidatePath("/dashboard");

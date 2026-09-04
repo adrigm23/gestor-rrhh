@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
 import { prisma } from "../../lib/prisma";
+import { usuarioService } from "../../../services/usuario";
 import DateTimeLocal from "../date-time-local";
 import ModificacionFichajeForm from "./modificacion-fichaje-form";
 
@@ -16,6 +17,9 @@ export default async function ModificacionFichajesPage() {
   }
 
   const role = session.user?.role ?? "";
+  if (role !== "GERENTE" && role !== "ADMIN_SISTEMA") {
+    redirect("/dashboard");
+  }
 
   const gerenteEmpresaId =
     role === "GERENTE"
@@ -27,16 +31,7 @@ export default async function ModificacionFichajesPage() {
         )?.empresaId ?? null
       : null;
 
-  const empleados = await prisma.usuario.findMany({
-    where:
-      role === "ADMIN_SISTEMA"
-        ? { rol: "EMPLEADO" }
-        : gerenteEmpresaId
-          ? { rol: "EMPLEADO", empresaId: gerenteEmpresaId }
-          : { rol: "EMPLEADO", id: "__none__" },
-    select: { id: true, nombre: true, email: true },
-    orderBy: { nombre: "asc" },
-  });
+  const empleados = await usuarioService.listEmpleados(session.user?.id ?? "", role);
 
   const fichajes = await prisma.fichaje.findMany({
     where:

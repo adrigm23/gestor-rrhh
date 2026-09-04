@@ -50,7 +50,7 @@ export default function PasswordResetForm({ usuarioId }: PasswordResetFormProps)
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          minLength={8}
+          minLength={10}
           required
           autoComplete="new-password"
           placeholder="Nueva contrasena"

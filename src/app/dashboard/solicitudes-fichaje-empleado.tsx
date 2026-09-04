@@ -39,7 +39,10 @@ export default function SolicitudesFichajeEmpleado({
   );
 
   return (
-    <section className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+    <section
+      id="solicitudes-fichaje"
+      className="rounded-[2.5rem] border border-slate-100 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)]"
+    >
       <header className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-sky-500/70">

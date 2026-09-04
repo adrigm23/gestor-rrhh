@@ -8,6 +8,7 @@ import {
   sanitizeFormDataString,
   sanitizeString,
 } from "../utils/input";
+import { organizacionService } from "../../services/organizacion";
 
 export type OrganizacionState = {
   status: "idle" | "error" | "success";
@@ -35,7 +36,7 @@ export async function crearCentroTrabajo(
 
   const actor = await prisma.usuario.findUnique({
     where: { id: session.user.id },
-    select: { rol: true, empresaId: true },
+    select: { rol: true },
   });
 
   if (!actor || actor.rol === "EMPLEADO") {
@@ -53,44 +54,23 @@ export async function crearCentroTrabajo(
     return { ...emptyError, message: "Nombre requerido." };
   }
 
-  const empresaId =
-    actor.rol === "ADMIN_SISTEMA" ? empresaIdFromForm : actor.empresaId;
+  const result = await organizacionService.crearCentroTrabajo(session.user.id, actor.rol, {
+    nombre,
+    gerenteId,
+    direccion: direccion || null,
+    empresaId: empresaIdFromForm,
+  });
 
-  if (!empresaId) {
-    return { ...emptyError, message: "Empresa requerida." };
-  }
-
-  if (gerenteId) {
-    const gerente = await prisma.usuario.findUnique({
-      where: { id: gerenteId },
-      select: { rol: true, empresaId: true },
-    });
-
-    if (!gerente || gerente.rol !== "GERENTE" || gerente.empresaId !== empresaId) {
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "empresa-requerida":
+      return { ...emptyError, message: "Empresa requerida." };
+    case "gerente-invalido":
       return { ...emptyError, message: "Gerente invalido." };
-    }
+    case "nombre-duplicado":
+      return { ...emptyError, message: "Ya existe un centro con ese nombre." };
   }
-
-  const existente = await prisma.centroTrabajo.findFirst({
-    where: {
-      empresaId,
-      nombre: { equals: nombre, mode: "insensitive" },
-    },
-    select: { id: true },
-  });
-
-  if (existente) {
-    return { ...emptyError, message: "Ya existe un centro con ese nombre." };
-  }
-
-  await prisma.centroTrabajo.create({
-    data: {
-      nombre,
-      empresaId,
-      gerenteId,
-      ...(direccion ? { direccion } : {}),
-    },
-  });
 
   revalidatePath("/dashboard/centros-trabajo");
   return { ...emptySuccess, message: "Centro creado correctamente." };
@@ -108,7 +88,7 @@ export async function crearDepartamento(
 
   const actor = await prisma.usuario.findUnique({
     where: { id: session.user.id },
-    select: { rol: true, empresaId: true },
+    select: { rol: true },
   });
 
   if (!actor || actor.rol === "EMPLEADO") {
@@ -124,55 +104,25 @@ export async function crearDepartamento(
     return { ...emptyError, message: "Nombre requerido." };
   }
 
-  const empresaId =
-    actor.rol === "ADMIN_SISTEMA" ? empresaIdFromForm : actor.empresaId;
+  const result = await organizacionService.crearDepartamento(session.user.id, actor.rol, {
+    nombre,
+    gerenteId,
+    centroTrabajoId,
+    empresaId: empresaIdFromForm,
+  });
 
-  if (!empresaId) {
-    return { ...emptyError, message: "Empresa requerida." };
-  }
-
-  if (gerenteId) {
-    const gerente = await prisma.usuario.findUnique({
-      where: { id: gerenteId },
-      select: { rol: true, empresaId: true },
-    });
-
-    if (!gerente || gerente.rol !== "GERENTE" || gerente.empresaId !== empresaId) {
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "empresa-requerida":
+      return { ...emptyError, message: "Empresa requerida." };
+    case "gerente-invalido":
       return { ...emptyError, message: "Gerente invalido." };
-    }
-  }
-
-  if (centroTrabajoId) {
-    const centro = await prisma.centroTrabajo.findUnique({
-      where: { id: centroTrabajoId },
-      select: { empresaId: true },
-    });
-
-    if (!centro || centro.empresaId !== empresaId) {
+    case "centro-invalido":
       return { ...emptyError, message: "Centro de trabajo invalido." };
-    }
+    case "nombre-duplicado":
+      return { ...emptyError, message: "Ya existe un departamento con ese nombre." };
   }
-
-  const existente = await prisma.departamento.findFirst({
-    where: {
-      empresaId,
-      nombre: { equals: nombre, mode: "insensitive" },
-    },
-    select: { id: true },
-  });
-
-  if (existente) {
-    return { ...emptyError, message: "Ya existe un departamento con ese nombre." };
-  }
-
-  await prisma.departamento.create({
-    data: {
-      nombre,
-      empresaId,
-      gerenteId,
-      centroTrabajoId,
-    },
-  });
 
   revalidatePath("/dashboard/departamentos");
   return { ...emptySuccess, message: "Departamento creado correctamente." };
@@ -190,7 +140,7 @@ export async function actualizarCentroTrabajoDireccion(
 
   const actor = await prisma.usuario.findUnique({
     where: { id: session.user.id },
-    select: { rol: true, empresaId: true },
+    select: { rol: true },
   });
 
   if (!actor || actor.rol === "EMPLEADO") {
@@ -206,23 +156,21 @@ export async function actualizarCentroTrabajoDireccion(
     return { ...emptyError, message: "Centro invalido." };
   }
 
-  const centro = await prisma.centroTrabajo.findUnique({
-    where: { id: centroId },
-    select: { empresaId: true },
-  });
+  const result = await organizacionService.updateCentroDireccion(
+    session.user.id,
+    actor.rol,
+    centroId,
+    direccion || null,
+  );
 
-  if (!centro) {
-    return { ...emptyError, message: "Centro no encontrado." };
+  switch (result.outcome) {
+    case "ok":
+      break;
+    case "not-found":
+      return { ...emptyError, message: "Centro no encontrado." };
+    case "out-of-scope":
+      return { ...emptyError, message: "Centro fuera de tu empresa." };
   }
-
-  if (actor.rol === "GERENTE" && actor.empresaId !== centro.empresaId) {
-    return { ...emptyError, message: "Centro fuera de tu empresa." };
-  }
-
-  await prisma.centroTrabajo.update({
-    where: { id: centroId },
-    data: { direccion: direccion || null },
-  });
 
   revalidatePath("/dashboard/centros-trabajo");
   revalidatePath("/dashboard");

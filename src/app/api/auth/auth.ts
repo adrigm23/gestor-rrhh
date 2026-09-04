@@ -1,147 +1,16 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { comparePassword } from "../../../app/utils/password";
 import { prisma } from "../../../app/lib/prisma";
 import { hashNfcUid, sanitizeNfcUid } from "../../../app/utils/nfc";
-import { sanitizeEmail, sanitizeString } from "../../../app/utils/input";
-
-const normalizeEmail = (value: string) => sanitizeEmail(value);
+import { sanitizeString } from "../../../app/utils/input";
+import { getClientIp } from "../../../app/lib/client-ip";
+import { authService } from "../../../services/auth";
+import { isLoginBlocked, recordLoginAttempt } from "../../../services/auth/login-throttle";
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-
-const LOGIN_WINDOW_MS = 10 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 5;
-const LOGIN_BLOCK_MS = 5 * 60 * 1000;
-const LOGIN_RETENTION_MS = 24 * 60 * 60 * 1000;
-
-const logThrottleError = (scope: string, error: unknown) => {
-  console.error(`[Auth throttle] ${scope}:`, error);
-};
-
-const maybeCleanupLoginThrottle = () => {
-  if (Math.random() > 0.02) return;
-
-  const now = new Date();
-  const staleCutoff = new Date(now.getTime() - LOGIN_RETENTION_MS);
-
-  void prisma.loginThrottle
-    .deleteMany({
-      where: {
-        updatedAt: { lt: staleCutoff },
-        OR: [{ blockedUntil: null }, { blockedUntil: { lt: now } }],
-      },
-    })
-    .catch(() => undefined);
-};
-
-const isLoginBlocked = async (key: string) => {
-  maybeCleanupLoginThrottle();
-
-  try {
-    const now = new Date();
-    const entry = await prisma.loginThrottle.findUnique({
-      where: { key },
-      select: { blockedUntil: true },
-    });
-
-    if (!entry?.blockedUntil) return false;
-
-    if (entry.blockedUntil <= now) {
-      await prisma.loginThrottle
-        .update({
-          where: { key },
-          data: {
-            attempts: 0,
-            firstAttemptAt: null,
-            blockedUntil: null,
-          },
-        })
-        .catch(() => undefined);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    logThrottleError("isLoginBlocked", error);
-    return false;
-  }
-};
-
-const resetLoginAttempts = async (key: string) => {
-  await prisma.loginThrottle.delete({ where: { key } }).catch(() => undefined);
-};
-
-const recordFailedLoginAttempt = async (key: string) => {
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - LOGIN_WINDOW_MS);
-
-  await prisma.$transaction(async (tx) => {
-    const current = await tx.loginThrottle.findUnique({
-      where: { key },
-      select: { attempts: true, firstAttemptAt: true, blockedUntil: true },
-    });
-
-    if (!current) {
-      await tx.loginThrottle.create({
-        data: {
-          key,
-          attempts: 1,
-          firstAttemptAt: now,
-        },
-      });
-      return;
-    }
-
-    const windowExpired =
-      !current.firstAttemptAt || current.firstAttemptAt < windowStart;
-
-    if (windowExpired) {
-      await tx.loginThrottle.update({
-        where: { key },
-        data: {
-          attempts: 1,
-          firstAttemptAt: now,
-          blockedUntil: null,
-        },
-      });
-      return;
-    }
-
-    const updated = await tx.loginThrottle.update({
-      where: { key },
-      data: { attempts: { increment: 1 } },
-      select: { attempts: true, blockedUntil: true },
-    });
-
-    const alreadyBlocked =
-      updated.blockedUntil !== null && updated.blockedUntil > now;
-
-    if (!alreadyBlocked && updated.attempts >= LOGIN_MAX_ATTEMPTS) {
-      await tx.loginThrottle.update({
-        where: { key },
-        data: {
-          blockedUntil: new Date(now.getTime() + LOGIN_BLOCK_MS),
-        },
-      });
-    }
-  });
-};
-
-const recordLoginAttempt = async (key: string, success: boolean) => {
-  try {
-    if (success) {
-      await resetLoginAttempts(key);
-      return;
-    }
-
-    await recordFailedLoginAttempt(key);
-  } catch (error) {
-    logThrottleError("recordLoginAttempt", error);
-  }
-};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -151,49 +20,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const email = normalizeEmail(credentials.email as string);
-        const password = sanitizeString(credentials.password, {
-          trim: false,
-          maxLength: 256,
-        });
-        if (!email || !password) return null;
-        if (await isLoginBlocked(email)) {
-          await sleep(600);
+        // Auditoría de seguridad (Fase 2.19, hallazgo #9): verifyCredentials
+        // ya bloquea por email (LoginThrottle), pero eso no frena un ataque
+        // de "password spraying" — muchas cuentas distintas, pocos intentos
+        // por cuenta, desde una misma IP. Este límite por IP es independiente
+        // y usa el mismo LoginThrottle (respaldado en BD, no en memoria, así
+        // que sí sobrevive a cold starts serverless).
+        const ipKey = `login:ip:${getClientIp(request.headers)}`;
+        if (await isLoginBlocked(ipKey)) {
           return null;
         }
 
-        const user = await prisma.usuario.findUnique({
-          where: { email },
-        });
-
-        if (!user || !user.password || user.activo === false) {
-          await recordLoginAttempt(email, false);
-          await sleep(600);
-          return null;
-        }
-
-        const isPasswordCorrect = await comparePassword(
-          password,
-          user.password,
+        const result = await authService.verifyCredentials(
+          credentials.email as string,
+          credentials.password as string,
         );
 
-        if (!isPasswordCorrect) {
-          await recordLoginAttempt(email, false);
-          await sleep(600);
-          return null;
-        }
+        await recordLoginAttempt(ipKey, result.outcome === "ok");
 
-        await recordLoginAttempt(email, true);
+        if (result.outcome !== "ok") return null;
+
         return {
-          id: String(user.id),
-          name: user.nombre,
-          email: user.email,
-          role: user.rol,
-          empresaId: user.empresaId ?? null,
-          passwordMustChange: user.passwordMustChange ?? false,
+          id: result.user.userId,
+          name: result.user.nombre,
+          email: result.user.email,
+          role: result.user.role,
+          empresaId: result.user.empresaId,
+          passwordMustChange: result.user.passwordMustChange,
         };
       },
     }),

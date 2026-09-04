@@ -48,6 +48,7 @@ model Usuario {
   gerenteDepartamentos Departamento[] @relation("DepartamentoGerente")
   gerenteCentros CentroTrabajo[] @relation("CentroGerente")
   exportacionesSolicitadas Exportacion[]
+  mobileSessions MobileSession[]
   createdAt  DateTime  @default(now())
 }
 
@@ -116,6 +117,34 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+}
+
+model MobileSession {
+  id                   String    @id @default(cuid())
+  usuarioId            String
+  usuario              Usuario   @relation(fields: [usuarioId], references: [id])
+  refreshTokenHash     String    @unique
+  currentTokenIssuedAt DateTime?
+  currentTokenJti      String?
+  deviceName           String?
+  platform             String?
+  createdAt            DateTime  @default(now())
+  expiresAt            DateTime
+  revokedAt            DateTime?
+  revokedReason        RevokedReason?
+  tokenHistory         MobileSessionTokenHistory[]
+
+  @@index([usuarioId])
+}
+
+model MobileSessionTokenHistory {
+  id        String        @id @default(cuid())
+  sessionId String
+  session   MobileSession @relation(fields: [sessionId], references: [id])
+  tokenHash String        @unique
+  createdAt DateTime      @default(now())
+
+  @@index([sessionId])
 }
 
 model LoginThrottle {
@@ -229,6 +258,19 @@ enum EstadoSolicitudFichaje {
   PENDIENTE
   ACEPTADA
   RECHAZADA
+}
+
+enum RevokedReason {
+  LOGOUT
+  REUSE_DETECTED
+  ADMIN_REVOKE_ALL
+  EXPIRED
+  // Auditoría de seguridad (Fase 2.19, hallazgo #3): revocación de UN
+  // dispositivo concreto por el propio usuario desde la lista de sesiones
+  // — distinto de LOGOUT (el propio dispositivo actual cerrando sesión) y
+  // de ADMIN_REVOKE_ALL (todas las sesiones, disparado por un admin o por
+  // un cambio de contraseña).
+  USER_REVOKE_DEVICE
 }
 
 enum AccionJustificante {

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
 import { prisma } from "../lib/prisma";
+import { solicitudService } from "../../services/solicitud";
 import {
   createSignedUrl,
   deleteJustificante,
@@ -25,26 +26,6 @@ const parseDate = (value?: string | null) => {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 };
-
-const resolveRange = (inicio: Date, fin: Date | null) => ({
-  inicio,
-  fin: fin ?? inicio,
-});
-
-const overlapCondition = (inicio: Date, fin: Date) => ({
-  OR: [
-    {
-      AND: [{ fin: null }, { inicio: { gte: inicio } }, { inicio: { lte: fin } }],
-    },
-    {
-      AND: [
-        { fin: { not: null } },
-        { inicio: { lte: fin } },
-        { fin: { gte: inicio } },
-      ],
-    },
-  ],
-});
 
 const logJustificanteAcceso = async (
   solicitudId: string,
@@ -101,34 +82,23 @@ export async function solicitarVacaciones(
   }
 
   try {
-    const range = resolveRange(inicio, fin);
-    const overlapping = await prisma.solicitud.findFirst({
-      where: {
-        usuarioId: session.user.id,
-        tipo: { in: ["VACACIONES", "AUSENCIA"] },
-        estado: { in: ["PENDIENTE", "APROBADA"] },
-        ...overlapCondition(range.inicio, range.fin),
-      },
-      select: { id: true, tipo: true, estado: true },
+    const result = await solicitudService.create(session.user.id, {
+      tipo: "VACACIONES",
+      inicio,
+      fin,
+      motivo: motivo || null,
     });
 
-    if (overlapping) {
+    if (result.outcome === "overlap") {
       return {
         ...emptyError,
         message:
           "Ya tienes una solicitud pendiente o aprobada que se solapa con esas fechas.",
       };
     }
-
-    await prisma.solicitud.create({
-      data: {
-        usuarioId: session.user.id,
-        tipo: "VACACIONES",
-        inicio,
-        fin,
-        motivo: motivo || null,
-      },
-    });
+    if (result.outcome === "invalid-date-range") {
+      return { ...emptyError, message: result.message };
+    }
   } catch (error) {
     console.error("Error al solicitar vacaciones:", error);
     return { ...emptyError, message: "No se pudo enviar la solicitud." };
@@ -187,52 +157,24 @@ export async function notificarAusencia(
   }
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (ausenciaTipo === "FALTA" && inicio.getTime() > today.getTime()) {
-      return {
-        ...emptyError,
-        message: "La fecha de inicio no puede ser futura si ya has faltado.",
-      };
-    }
-
-    if (ausenciaTipo === "AVISO" && inicio.getTime() < today.getTime()) {
-      return {
-        ...emptyError,
-        message: "La fecha de inicio no puede ser pasada si vas a faltar.",
-      };
-    }
-
-    const range = resolveRange(inicio, fin);
-    const overlapping = await prisma.solicitud.findFirst({
-      where: {
-        usuarioId: session.user.id,
-        tipo: { in: ["VACACIONES", "AUSENCIA"] },
-        estado: { in: ["PENDIENTE", "APROBADA"] },
-        ...overlapCondition(range.inicio, range.fin),
-      },
-      select: { id: true, tipo: true, estado: true },
+    const result = await solicitudService.create(session.user.id, {
+      tipo: "AUSENCIA",
+      inicio,
+      fin,
+      motivo: motivo || null,
+      ausenciaTipo,
     });
 
-    if (overlapping) {
+    if (result.outcome === "invalid-date-range") {
+      return { ...emptyError, message: result.message };
+    }
+    if (result.outcome === "overlap") {
       return {
         ...emptyError,
         message:
           "Ya tienes una solicitud pendiente o aprobada que se solapa con esas fechas.",
       };
     }
-
-    await prisma.solicitud.create({
-      data: {
-        usuarioId: session.user.id,
-        tipo: "AUSENCIA",
-        inicio,
-        fin,
-        motivo: motivo || null,
-        ausenciaTipo,
-      },
-    });
   } catch (error) {
     console.error("Error al notificar ausencia:", error);
     return { ...emptyError, message: "No se pudo enviar la ausencia." };
@@ -309,68 +251,29 @@ export async function actualizarSolicitud(formData: FormData) {
     throw new Error("Estado invalido.");
   }
 
-  const solicitud = await prisma.solicitud.findUnique({
-    where: { id: solicitudId },
-    include: { usuario: { select: { empresaId: true } } },
-  });
-
-  if (!solicitud) {
-    throw new Error("Solicitud no encontrada.");
-  }
-
   const role = session.user?.role ?? "";
-
-  if (role === "GERENTE") {
-    const gerente = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
-      select: { empresaId: true },
-    });
-
-    if (!gerente || gerente.empresaId !== solicitud.usuario.empresaId) {
-      throw new Error("No autorizado");
-    }
-  } else if (role !== "ADMIN_SISTEMA") {
+  if (role !== "GERENTE" && role !== "ADMIN_SISTEMA") {
     throw new Error("No autorizado");
   }
 
-  if (solicitud.estado === "PENDIENTE" && estado === "ANULADA") {
-    throw new Error("No se puede anular una solicitud pendiente.");
+  const result = await solicitudService.updateEstado(session.user.id, role, solicitudId, estado);
+
+  switch (result.outcome) {
+    case "ok":
+      revalidatePath("/dashboard/vacaciones-ausencias");
+      revalidatePath("/dashboard/calendario");
+      return;
+    case "not-found":
+      throw new Error("Solicitud no encontrada.");
+    case "unauthorized":
+      throw new Error("No autorizado");
+    case "cannot-cancel-pending":
+      throw new Error("No se puede anular una solicitud pendiente.");
+    case "invalid-transition":
+      throw new Error("Transicion de estado no permitida.");
+    case "overlap":
+      throw new Error("Ya existe una solicitud aprobada que se solapa con esas fechas.");
   }
-
-  if (
-    solicitud.estado !== "PENDIENTE" &&
-    !(solicitud.estado === "APROBADA" && estado === "ANULADA")
-  ) {
-    throw new Error("Transicion de estado no permitida.");
-  }
-
-  if (solicitud.estado === "PENDIENTE" && estado === "APROBADA") {
-    const range = resolveRange(solicitud.inicio, solicitud.fin);
-    const overlapApproved = await prisma.solicitud.findFirst({
-      where: {
-        id: { not: solicitud.id },
-        usuarioId: solicitud.usuarioId,
-        tipo: { in: ["VACACIONES", "AUSENCIA"] },
-        estado: "APROBADA",
-        ...overlapCondition(range.inicio, range.fin),
-      },
-      select: { id: true },
-    });
-
-    if (overlapApproved) {
-      throw new Error(
-        "Ya existe una solicitud aprobada que se solapa con esas fechas.",
-      );
-    }
-  }
-
-  await prisma.solicitud.update({
-    where: { id: solicitudId },
-    data: { estado },
-  });
-
-  revalidatePath("/dashboard/vacaciones-ausencias");
-  revalidatePath("/dashboard/calendario");
 }
 
 export async function eliminarJustificante(formData: FormData) {

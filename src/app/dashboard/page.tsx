@@ -1,6 +1,7 @@
 import { auth } from "../api/auth/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "../lib/prisma";
+import type { DashboardNotificationSummary } from "./notification-types";
 import { getApprovedLeaveType } from "../lib/vacaciones";
 import { togglePausa } from "../actions/fichaje-actions";
 import {
@@ -335,6 +336,16 @@ export default async function DashboardPage() {
           createdAt: item.createdAt.toISOString(),
         }))
       : [];
+  const notificationSummary: DashboardNotificationSummary = {
+    total: solicitudesFichaje.length,
+    items: solicitudesFichaje.slice(0, 5).map((solicitud) => ({
+      id: solicitud.id,
+      title: "Solicitud de modificacion de fichaje",
+      description: `${solicitud.solicitanteNombre} te ha enviado una solicitud pendiente.`,
+      href: "/dashboard#solicitudes-fichaje",
+      createdAt: solicitud.createdAt,
+    })),
+  };
 
   return (
     <div className="space-y-8">
@@ -348,7 +359,7 @@ export default async function DashboardPage() {
             <span>{fechaLarga}</span>
           </div>
         </div>
-        <DashboardQuickActions />
+        <DashboardQuickActions notificationSummary={notificationSummary} />
       </header>
 
       <section

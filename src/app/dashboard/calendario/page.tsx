@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../api/auth/auth";
-import { prisma } from "../../lib/prisma";
+import { fichajeService } from "../../../services/fichaje";
+import { calendarioService } from "../../../services/calendario";
 import CalendarioEmpleado, {
   type FichajeHistorial,
   type SolicitudResumen,
@@ -18,82 +19,13 @@ export default async function CalendarioPage() {
   const startRange = new Date(today.getFullYear(), today.getMonth() - 3, 1);
   const endRange = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59, 999);
 
-  const [solicitudes, fichajes, historial, jornadaActiva] = userId
+  const [{ solicitudes, fichajes }, historial, status] = userId
     ? await Promise.all([
-        prisma.solicitud.findMany({
-          where: {
-            usuarioId: userId,
-            OR: [
-              { inicio: { gte: startRange, lte: endRange } },
-              { fin: { gte: startRange, lte: endRange } },
-              {
-                AND: [
-                  { inicio: { lte: startRange } },
-                  { fin: { gte: endRange } },
-                ],
-              },
-            ],
-          },
-          orderBy: { inicio: "asc" },
-        }),
-        prisma.fichaje.findMany({
-          where: {
-            usuarioId: userId,
-            entrada: { gte: startRange, lte: endRange },
-          },
-          select: { entrada: true, salida: true },
-        }),
-        prisma.fichaje.findMany({
-          where: {
-            usuarioId: userId,
-          },
-          select: {
-            id: true,
-            entrada: true,
-            salida: true,
-            tipo: true,
-            editado: true,
-          },
-          orderBy: { entrada: "desc" },
-          take: 30,
-        }),
-        prisma.fichaje.findFirst({
-          where: { usuarioId: userId, salida: null, tipo: "JORNADA" },
-          orderBy: { entrada: "desc" },
-        }),
+        calendarioService.getRango(userId, startRange, endRange),
+        fichajeService.listHistory(userId, 30),
+        fichajeService.getStatus(userId),
       ])
-    : [[], [], [], null];
-
-  const pausaActiva =
-    userId && jornadaActiva
-      ? await prisma.fichaje.findFirst({
-          where: {
-            usuarioId: userId,
-            salida: null,
-            tipo: "PAUSA_COMIDA",
-            entrada: { gte: jornadaActiva.entrada },
-          },
-          orderBy: { entrada: "desc" },
-        })
-      : null;
-
-  const pausasCerradas =
-    userId && jornadaActiva
-      ? await prisma.fichaje.findMany({
-          where: {
-            usuarioId: userId,
-            tipo: "PAUSA_COMIDA",
-            entrada: { gte: jornadaActiva.entrada },
-            salida: { not: null },
-          },
-          orderBy: { entrada: "asc" },
-        })
-      : [];
-
-  const pauseAccumulatedMs = pausasCerradas.reduce((total, pausa) => {
-    const end = pausa.salida ? pausa.salida.getTime() : pausa.entrada.getTime();
-    return total + Math.max(0, end - pausa.entrada.getTime());
-  }, 0);
+    : [{ solicitudes: [], fichajes: [] }, [], null];
 
   const resumen: SolicitudResumen[] = solicitudes.map((item) => ({
     id: item.id,
@@ -124,12 +56,11 @@ export default async function CalendarioPage() {
       solicitudes={resumen}
       fichajes={fichajesResumen}
       historial={historialResumen}
-      jornadaEntradaIso={jornadaActiva?.entrada.toISOString() ?? null}
-      pauseStartIso={pausaActiva?.entrada.toISOString() ?? null}
-      pauseAccumulatedMs={pauseAccumulatedMs}
-      jornadaActiva={Boolean(jornadaActiva)}
-      pausaActiva={Boolean(pausaActiva)}
+      jornadaEntradaIso={status?.shift?.entrada.toISOString() ?? null}
+      pauseStartIso={status?.pause?.entrada.toISOString() ?? null}
+      pauseAccumulatedMs={status?.pauseAccumulatedMs ?? 0}
+      jornadaActiva={Boolean(status?.shift)}
+      pausaActiva={Boolean(status?.pause)}
     />
   );
 }
-

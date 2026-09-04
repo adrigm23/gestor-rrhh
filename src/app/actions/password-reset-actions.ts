@@ -1,9 +1,14 @@
 "use server";
 
 import crypto from "crypto";
+import { headers } from "next/headers";
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../utils/password";
 import { sendPasswordResetEmail } from "../lib/mailer";
+import { getClientIp } from "../lib/client-ip";
+import { PasswordPolicySchema } from "@gestor-rrhh/shared";
+import { authService } from "../../services/auth";
+import { isLoginBlocked, recordLoginAttempt } from "../../services/auth/login-throttle";
 import {
   sanitizeFormDataEmail,
   sanitizeFormDataString,
@@ -46,6 +51,11 @@ const getAppUrl = () => {
   return null;
 };
 
+const genericPending: PasswordResetState = {
+  ...emptySuccess,
+  message: "Si el correo existe, recibiras un enlace para restablecer.",
+};
+
 export async function solicitarResetPassword(
   _prevState: PasswordResetState,
   formData: FormData,
@@ -55,6 +65,18 @@ export async function solicitarResetPassword(
   if (!email) {
     return { ...emptyError, message: "Introduce un correo valido." };
   }
+
+  // Auditoría de seguridad (Fase 2.19, hallazgo #10): antes solo había un
+  // límite por usuario (RESET_MAX_REQUESTS); nada frenaba a alguien barriendo
+  // muchos emails distintos desde la misma IP para enumerar cuáles existen.
+  // Se reutiliza LoginThrottle (respaldado en BD) tratando cada petición
+  // como "fallo" a propósito: aquí no hay noción de intento "correcto" que
+  // deba resetear el contador, cada petición cuenta igual exista o no la cuenta.
+  const ipKey = `pwreset:ip:${getClientIp(await headers())}`;
+  if (await isLoginBlocked(ipKey)) {
+    return genericPending;
+  }
+  await recordLoginAttempt(ipKey, false);
 
   const usuario = await prisma.usuario.findUnique({
     where: { email },
@@ -73,10 +95,7 @@ export async function solicitarResetPassword(
     });
 
     if (recentRequests >= RESET_MAX_REQUESTS) {
-      return {
-        ...emptySuccess,
-        message: "Si el correo existe, recibiras un enlace para restablecer.",
-      };
+      return genericPending;
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -99,24 +118,26 @@ export async function solicitarResetPassword(
     const appUrl = getAppUrl();
     if (!appUrl) {
       console.error("APP_URL/NEXTAUTH_URL no configurado para reset password.");
-      return {
-        ...emptySuccess,
-        message: "Si el correo existe, recibiras un enlace para restablecer.",
-      };
+      return genericPending;
     }
 
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
-    await sendPasswordResetEmail({
+    // Auditoría de seguridad (Fase 2.19, hallazgo #10): antes se esperaba
+    // (await) el envío SMTP aquí, lo que hacía la respuesta claramente más
+    // lenta cuando el email SÍ existe frente a cuando no — un canal de
+    // temporización que permite enumerar cuentas aunque el mensaje sea
+    // idéntico en ambos casos. Al no esperar el envío, la respuesta al
+    // formulario ya no depende de la latencia del SMTP.
+    void sendPasswordResetEmail({
       to: usuario.email,
       name: usuario.nombre,
       resetUrl,
+    }).catch((error) => {
+      console.error("Error enviando email de reset password:", error);
     });
   }
 
-  return {
-    ...emptySuccess,
-    message: "Si el correo existe, recibiras un enlace para restablecer.",
-  };
+  return genericPending;
 }
 
 export async function resetPassword(
@@ -137,8 +158,16 @@ export async function resetPassword(
     return { ...emptyError, message: "Token invalido." };
   }
 
-  if (!newPassword.trim()) {
-    return { ...emptyError, message: "Introduce una contrasena valida." };
+  // Auditoría de seguridad (Fase 2.19, hallazgo #8): antes esto solo
+  // comprobaba que no estuviera vacío — el reset de autoservicio era el
+  // único de los cuatro sitios donde se fija una contraseña que no
+  // aplicaba ningún mínimo. Mismo PasswordPolicySchema que el resto.
+  const policyResult = PasswordPolicySchema.safeParse(newPassword);
+  if (!policyResult.success) {
+    return {
+      ...emptyError,
+      message: policyResult.error.issues[0]?.message ?? "Contrasena invalida.",
+    };
   }
 
   if (newPassword !== confirmPassword) {
@@ -175,6 +204,13 @@ export async function resetPassword(
     where: { usuarioId: resetToken.usuario.id, usedAt: null },
     data: { usedAt: new Date() },
   });
+
+  // Auditoría de seguridad (Fase 2.19, hallazgo #2): este flujo de
+  // autoservicio (token por email) actualiza la contraseña directamente
+  // aquí, sin pasar por usuarioService.resetPassword — así que el fix
+  // aplicado allí no cubría este camino. Si el motivo del reset es un token
+  // robado, sin esto el atacante seguía dentro en cualquier móvil ya logueado.
+  await authService.revokeAllSessions(resetToken.usuario.id);
 
   return { ...emptySuccess, message: "Contrasena restablecida." };
 }

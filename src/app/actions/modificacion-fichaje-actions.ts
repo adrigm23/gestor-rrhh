@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "../api/auth/auth";
-import { prisma } from "../lib/prisma";
+import { modificacionFichajeService } from "../../services/modificacion-fichaje";
 import {
   sanitizeFormDataId,
   sanitizeFormDataString,
@@ -60,54 +60,6 @@ const normalizeText = (value?: string | null) =>
 const isInvalidRange = (entrada: Date | null, salida: Date | null) =>
   Boolean(entrada && salida && salida.getTime() <= entrada.getTime());
 
-const hasOverlap = async (
-  usuarioId: string,
-  entrada: Date | null,
-  salida: Date | null,
-  excludeId?: string | null,
-) => {
-  if (!entrada) return false;
-
-  const excludeClause = excludeId ? { not: excludeId } : undefined;
-  const baseWhere = {
-    usuarioId,
-    tipo: "JORNADA" as const,
-    ...(excludeClause ? { id: excludeClause } : {}),
-  };
-
-  if (!salida) {
-    const open = await prisma.fichaje.findFirst({
-      where: {
-        ...baseWhere,
-        salida: null,
-      },
-      select: { id: true },
-    });
-    return Boolean(open);
-  }
-
-  const overlap = await prisma.fichaje.findFirst({
-    where: {
-      ...baseWhere,
-      OR: [
-        { salida: null, entrada: { lt: salida } },
-        { entrada: { lt: salida }, salida: { gt: entrada } },
-      ],
-    },
-    select: { id: true },
-  });
-
-  return Boolean(overlap);
-};
-
-const getEmpresaId = async (userId: string) => {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: userId },
-    select: { empresaId: true },
-  });
-  return usuario?.empresaId ?? null;
-};
-
 export async function crearSolicitudModificacion(
   _prevState: ModificacionFichajeState,
   formData: FormData,
@@ -154,52 +106,25 @@ export async function crearSolicitudModificacion(
     return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
   }
 
-  const empresaId =
-    role === "ADMIN_SISTEMA"
-      ? null
-      : await getEmpresaId(session.user.id);
-
-  const empleado = await prisma.usuario.findUnique({
-    where: { id: empleadoId },
-    select: { rol: true, empresaId: true },
+  const result = await modificacionFichajeService.create(session.user.id, role, {
+    empleadoId,
+    fichajeId: fichajeId || null,
+    entradaPropuesta,
+    salidaPropuesta,
+    motivo: motivo || null,
   });
 
-  if (!empleado || empleado.rol !== "EMPLEADO") {
-    return { ...emptyError, message: "Empleado invalido." };
-  }
-
-  if (empresaId && empleado.empresaId !== empresaId) {
-    return { ...emptyError, message: "Empleado fuera de tu empresa." };
-  }
-
-  let fichajeTargetId: string | null = null;
-
-  if (fichajeId) {
-    const fichaje = await prisma.fichaje.findUnique({
-      where: { id: fichajeId },
-      select: { id: true, usuarioId: true },
-    });
-
-    if (!fichaje || fichaje.usuarioId !== empleadoId) {
+  switch (result.outcome) {
+    case "ok":
+      revalidatePath("/dashboard/modificacion-fichajes");
+      return { ...emptySuccess, message: "Solicitud enviada." };
+    case "invalid-employee":
+      return { ...emptyError, message: "Empleado invalido." };
+    case "employee-out-of-scope":
+      return { ...emptyError, message: "Empleado fuera de tu empresa." };
+    case "invalid-fichaje":
       return { ...emptyError, message: "Fichaje invalido." };
-    }
-
-    fichajeTargetId = fichaje.id;
   }
-
-  await prisma.solicitudModificacionFichaje.create({
-    data: {
-      empleadoId,
-      solicitanteId: session.user.id,
-      fichajeId: fichajeTargetId,
-      entradaPropuesta,
-      salidaPropuesta,
-      motivo: motivo || null,
-    },
-  });
-
-  revalidatePath("/dashboard/modificacion-fichajes");
-  return { ...emptySuccess, message: "Solicitud enviada." };
 }
 
 export async function responderSolicitudModificacion(
@@ -223,126 +148,29 @@ export async function responderSolicitudModificacion(
     return { ...emptyError, message: "Solicitud invalida." };
   }
 
-  const solicitud = await prisma.solicitudModificacionFichaje.findUnique({
-    where: { id: solicitudId },
-    include: {
-      fichaje: { select: { id: true, usuarioId: true, entrada: true, salida: true } },
-    },
-  });
+  const result = await modificacionFichajeService.respond(session.user.id, solicitudId, accion);
 
-  if (!solicitud || solicitud.empleadoId !== session.user.id) {
-    return { ...emptyError, message: "No autorizado." };
-  }
-
-  const fichajeActual = solicitud.fichaje
-    ? {
-        entrada: solicitud.fichaje.entrada,
-        salida: solicitud.fichaje.salida,
-      }
-    : null;
-
-  if (solicitud.estado !== "PENDIENTE") {
-    return { ...emptyError, message: "Solicitud ya respondida." };
-  }
-
-  if (accion === "RECHAZADA") {
-    await prisma.solicitudModificacionFichaje.update({
-      where: { id: solicitud.id },
-      data: {
-        estado: "RECHAZADA",
-        respondedAt: new Date(),
-        respondidoPorId: session.user.id,
-      },
-    });
-
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/modificacion-fichajes");
-    return { ...emptySuccess, message: "Solicitud rechazada." };
-  }
-
-  const entradaPropuesta = solicitud.entradaPropuesta ?? null;
-  const salidaPropuesta = solicitud.salidaPropuesta ?? null;
-
-  if (!entradaPropuesta && !salidaPropuesta) {
-    return { ...emptyError, message: "No hay horas propuestas." };
-  }
-
-  if (solicitud.fichajeId) {
-    const entradaFinal = entradaPropuesta ?? fichajeActual?.entrada ?? null;
-    const salidaFinal = salidaPropuesta ?? fichajeActual?.salida ?? null;
-
-    if (!entradaFinal) {
+  switch (result.outcome) {
+    case "ok":
+      revalidatePath("/dashboard");
+      revalidatePath("/dashboard/modificacion-fichajes");
+      return {
+        ...emptySuccess,
+        message: accion === "RECHAZADA" ? "Solicitud rechazada." : "Solicitud aplicada.",
+      };
+    case "not-found":
+      return { ...emptyError, message: "No autorizado." };
+    case "already-responded":
+      return { ...emptyError, message: "Solicitud ya respondida." };
+    case "no-hours-proposed":
+      return { ...emptyError, message: "No hay horas propuestas." };
+    case "entrada-required-for-update":
       return { ...emptyError, message: "Entrada requerida para actualizar fichaje." };
-    }
-
-    if (isInvalidRange(entradaFinal, salidaFinal)) {
-      return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
-    }
-
-    if (await hasOverlap(session.user.id, entradaFinal, salidaFinal, solicitud.fichajeId)) {
-      return { ...emptyError, message: "El rango se solapa con otro fichaje." };
-    }
-
-    const updateData: {
-      entrada?: Date;
-      salida?: Date | null;
-      editado?: boolean;
-      motivoEdicion?: string | null;
-      editadoPorId?: string | null;
-    } = {
-      editado: true,
-      motivoEdicion: solicitud.motivo ?? null,
-      editadoPorId: session.user.id,
-    };
-
-    if (entradaPropuesta) {
-      updateData.entrada = entradaPropuesta;
-    }
-
-    if (salidaPropuesta) {
-      updateData.salida = salidaPropuesta;
-    }
-
-    await prisma.fichaje.update({
-      where: { id: solicitud.fichajeId },
-      data: updateData,
-    });
-  } else {
-    if (!entradaPropuesta) {
+    case "entrada-required-for-create":
       return { ...emptyError, message: "Entrada requerida para crear fichaje." };
-    }
-
-    if (isInvalidRange(entradaPropuesta, salidaPropuesta)) {
+    case "invalid-range":
       return { ...emptyError, message: "La salida debe ser posterior a la entrada." };
-    }
-
-    if (await hasOverlap(session.user.id, entradaPropuesta, salidaPropuesta, null)) {
+    case "overlap":
       return { ...emptyError, message: "El rango se solapa con otro fichaje." };
-    }
-
-    await prisma.fichaje.create({
-      data: {
-        usuarioId: session.user.id,
-        entrada: entradaPropuesta,
-        salida: salidaPropuesta,
-        tipo: "JORNADA",
-        editado: true,
-        motivoEdicion: solicitud.motivo ?? null,
-        editadoPorId: session.user.id,
-      },
-    });
   }
-
-  await prisma.solicitudModificacionFichaje.update({
-    where: { id: solicitud.id },
-    data: {
-      estado: "ACEPTADA",
-      respondedAt: new Date(),
-      respondidoPorId: session.user.id,
-    },
-  });
-
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/modificacion-fichajes");
-  return { ...emptySuccess, message: "Solicitud aplicada." };
 }
