@@ -87,6 +87,18 @@ export class PrismaFichajeService implements FichajeService {
       return { outcome: "blocked-by-leave", leaveType };
     }
 
+    // Fase 2.20 (geolocalización, solo registro/auditoría — nunca bloquea
+    // el fichaje): si la empresa tiene el ajuste desactivado, se ignoran
+    // las coordenadas aunque el cliente las mande. Es un respaldo de
+    // privacidad server-side — antes, cualquier cliente (o una llamada
+    // directa a la API) podía guardar ubicación igual aunque la empresa
+    // hubiera dicho explícitamente que no quería recogerla.
+    const empresaGeo = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { empresa: { select: { geolocalizacionFichaje: true } } },
+    });
+    const effectiveCoords = empresaGeo?.empresa?.geolocalizacionFichaje ? coords : undefined;
+
     let result: ToggleFichajeResult | undefined;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -117,8 +129,8 @@ export class PrismaFichajeService implements FichajeService {
                 where: { id: ultimoFichaje.id },
                 data: {
                   salida: new Date(),
-                  ...(coords
-                    ? { latitudSalida: coords.latitude, longitudSalida: coords.longitude }
+                  ...(effectiveCoords
+                    ? { latitudSalida: effectiveCoords.latitude, longitudSalida: effectiveCoords.longitude }
                     : {}),
                 },
               });
@@ -136,7 +148,9 @@ export class PrismaFichajeService implements FichajeService {
                 usuarioId: userId,
                 entrada: new Date(),
                 tipo: "JORNADA",
-                ...(coords ? { latitud: coords.latitude, longitud: coords.longitude } : {}),
+                ...(effectiveCoords
+                  ? { latitud: effectiveCoords.latitude, longitud: effectiveCoords.longitude }
+                  : {}),
               },
             });
 

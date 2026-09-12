@@ -5,6 +5,11 @@ export interface UsuarioProfile {
   nombre: string;
   email: string;
   rol: Rol;
+  // Fase 2.20 (geolocalización en fichaje): el móvil necesita saber si su
+  // empresa quiere que se guarde la ubicación al fichar, igual que ya
+  // consulta la web (userMeta.empresa.geolocalizacionFichaje) — antes
+  // ningún endpoint accesible por EMPLEADO exponía esto.
+  geolocalizacionFichaje: boolean;
 }
 
 export type UpdateProfileResult =

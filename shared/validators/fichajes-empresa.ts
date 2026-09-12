@@ -12,6 +12,11 @@ export const FichajeEmpresaEntryDtoSchema = z.object({
   salida: z.string().datetime().nullable(),
   tipo: TipoFichajeSchema,
   editado: z.boolean(),
+  // Fase 2.20: solo presentes si la empresa guarda ubicación al fichar.
+  latitud: z.number().nullable(),
+  longitud: z.number().nullable(),
+  latitudSalida: z.number().nullable(),
+  longitudSalida: z.number().nullable(),
 });
 export type FichajeEmpresaEntryDto = z.infer<typeof FichajeEmpresaEntryDtoSchema>;
 

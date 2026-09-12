@@ -8,6 +8,13 @@
 // http://localhost en desarrollo sin tocar nada más.
 export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3912";
 
-if (!__DEV__ && !BASE_URL.startsWith("https://")) {
+// __DEV__ solo existe en el runtime de React Native/Expo — fuera de él (los
+// tests de mobile corren con tsx --test sobre Node puro, sin ese runtime)
+// no está definida. Se trata como "no es producción" en ese caso: aquí no
+// hay forma de que un valor http:// llegue a un usuario real.
+const isReactNativeDev = typeof __DEV__ !== "undefined" && __DEV__;
+const isReactNativeRuntime = typeof __DEV__ !== "undefined";
+
+if (isReactNativeRuntime && !isReactNativeDev && !BASE_URL.startsWith("https://")) {
   throw new Error("EXPO_PUBLIC_API_URL debe usar https:// en producción (valor actual: " + BASE_URL + ")");
 }

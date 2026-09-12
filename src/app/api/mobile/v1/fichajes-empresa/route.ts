@@ -48,6 +48,10 @@ function toDto(
     salida: entry.salida ? entry.salida.toISOString() : null,
     tipo: entry.tipo,
     editado: entry.editado,
+    latitud: entry.latitud,
+    longitud: entry.longitud,
+    latitudSalida: entry.latitudSalida,
+    longitudSalida: entry.longitudSalida,
   };
 }
 

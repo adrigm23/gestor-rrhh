@@ -90,6 +90,10 @@ export class PrismaFichajesEmpresaService implements FichajesEmpresaService {
       salida: f.salida,
       tipo: f.tipo,
       editado: f.editado,
+      latitud: f.latitud,
+      longitud: f.longitud,
+      latitudSalida: f.latitudSalida,
+      longitudSalida: f.longitudSalida,
     }));
 
     return { fichajes: entries, total, canQuery: true };

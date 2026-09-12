@@ -12,11 +12,13 @@ import { Radius, SoraFonts, Spacing, glowShadow } from '@/constants/theme';
 import { formatElapsed, useElapsedMs } from '@/hooks/use-elapsed-time';
 import { useFichajeStatus } from '@/hooks/use-fichaje-status';
 import { useModificacionesFichaje } from '@/hooks/use-modificaciones-fichaje';
+import { useProfile } from '@/hooks/use-profile';
 import { useRespondModificacion } from '@/hooks/use-respond-modificacion';
 import { useToggleFichaje } from '@/hooks/use-toggle-fichaje';
 import { useTogglePausa } from '@/hooks/use-toggle-pausa';
 import { useTheme } from '@/hooks/use-theme';
 import { useOfflineQueueStore } from '@/store/offline-queue-store';
+import { getBestEffortLocation } from '@/utils/geolocation';
 
 const respondErrorMessages: Record<string, string> = {
   'not-found': 'No autorizado.',
@@ -36,6 +38,7 @@ function formatDateTime(iso: string | null): string {
 export default function HomeScreen() {
   const theme = useTheme();
   const { data: status, isLoading, isError, refetch, isRefetching } = useFichajeStatus();
+  const { data: profile } = useProfile();
   const toggleFichajeMutation = useToggleFichaje();
   const togglePausaMutation = useTogglePausa();
   const pendingCount = useOfflineQueueStore((state) => state.pendingCount);
@@ -43,6 +46,23 @@ export default function HomeScreen() {
   const respondModificacion = useRespondModificacion();
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [modFeedback, setModFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Fase 2.20 (geolocalización en fichaje, solo registro/auditoría): solo
+  // se intenta pedir ubicación si la empresa lo quiere (profile.geolocaliza
+  // cionFichaje) — igual que ya hacía la web con userMeta.empresa. Es
+  // best-effort: si falla o el usuario deniega el permiso, se ficha igual
+  // sin ubicación (nunca bloquea), igual que fichaje-geo-form.tsx.
+  const handleToggleFichaje = async () => {
+    if (!profile?.geolocalizacionFichaje) {
+      toggleFichajeMutation.mutate(undefined);
+      return;
+    }
+    setIsLocating(true);
+    const coords = await getBestEffortLocation();
+    setIsLocating(false);
+    toggleFichajeMutation.mutate(coords);
+  };
 
   const handleRespond = (id: string, accion: 'ACEPTADA' | 'RECHAZADA') => {
     setRespondingId(id);
@@ -120,7 +140,8 @@ export default function HomeScreen() {
       ? 'Hoy tienes vacaciones aprobadas. No puedes registrar entradas ni salidas.'
       : 'Hoy tienes una ausencia aprobada. No puedes registrar entradas ni salidas.';
 
-  const disabledActions = isOnLeave || toggleFichajeMutation.isPending || togglePausaMutation.isPending;
+  const disabledActions =
+    isOnLeave || toggleFichajeMutation.isPending || togglePausaMutation.isPending || isLocating;
 
   return (
     <ThemedView style={styles.screen}>
@@ -204,7 +225,7 @@ export default function HomeScreen() {
 
             <View style={styles.actions}>
               <Pressable
-                onPress={() => toggleFichajeMutation.mutate(undefined)}
+                onPress={handleToggleFichaje}
                 disabled={disabledActions}
                 style={({ pressed }) => [
                   styles.actionButton,

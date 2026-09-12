@@ -27,12 +27,19 @@ import type {
   UsuarioService,
 } from "./types";
 
-function toProfile(row: { id: string; nombre: string; email: string; rol: string }): UsuarioProfile {
+function toProfile(row: {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+  empresa: { geolocalizacionFichaje: boolean } | null;
+}): UsuarioProfile {
   return {
     id: row.id,
     nombre: row.nombre,
     email: row.email,
     rol: row.rol as UsuarioProfile["rol"],
+    geolocalizacionFichaje: row.empresa?.geolocalizacionFichaje ?? false,
   };
 }
 
@@ -134,7 +141,13 @@ export class PrismaUsuarioService implements UsuarioService {
   async getProfile(userId: string): Promise<UsuarioProfile | null> {
     const row = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { id: true, nombre: true, email: true, rol: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        empresa: { select: { geolocalizacionFichaje: true } },
+      },
     });
     return row ? toProfile(row) : null;
   }
@@ -157,7 +170,13 @@ export class PrismaUsuarioService implements UsuarioService {
     const updated = await prisma.usuario.update({
       where: { id: userId },
       data: { nombre: input.nombre, email: input.email },
-      select: { id: true, nombre: true, email: true, rol: true },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        empresa: { select: { geolocalizacionFichaje: true } },
+      },
     });
 
     return { outcome: "ok", profile: toProfile(updated) };

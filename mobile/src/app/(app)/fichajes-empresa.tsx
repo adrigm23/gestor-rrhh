@@ -381,6 +381,28 @@ export default function FichajesEmpresaScreen() {
                   {' · '}
                   {formatDuration(item.entrada, item.salida)}
                 </ThemedText>
+                {(item.latitud !== null || item.latitudSalida !== null) && (
+                  <View style={styles.locationRow}>
+                    {item.latitud !== null && item.longitud !== null && (
+                      <Pressable
+                        onPress={() => Linking.openURL(`https://www.google.com/maps?q=${item.latitud},${item.longitud}`)}>
+                        <ThemedText type="small" style={{ color: theme.primary }}>
+                          Ver entrada
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                    {item.latitudSalida !== null && item.longitudSalida !== null && (
+                      <Pressable
+                        onPress={() =>
+                          Linking.openURL(`https://www.google.com/maps?q=${item.latitudSalida},${item.longitudSalida}`)
+                        }>
+                        <ThemedText type="small" style={{ color: theme.primary }}>
+                          Ver salida
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
               </View>
             ))}
           </Card>
@@ -473,6 +495,10 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     borderTopWidth: 1,
     gap: Spacing.half,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
   itemHeader: {
     flexDirection: 'row',

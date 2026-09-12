@@ -466,7 +466,7 @@ export default function PerfilScreen() {
                 disabled={actualizarConfig.isPending}
                 style={[styles.toggleRow, { opacity: actualizarConfig.isPending ? 0.6 : 1 }]}>
                 <ThemedText type="small" themeColor="textSecondary" style={styles.toggleLabel}>
-                  Geolocalización en el fichaje
+                  Guardar ubicación al fichar
                 </ThemedText>
                 <StatusBadge
                   label={miEmpresa.data.empresa.geolocalizacionFichaje ? 'Sí' : 'No'}

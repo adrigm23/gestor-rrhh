@@ -6,6 +6,9 @@ export const UsuarioProfileDtoSchema = z.object({
   nombre: z.string(),
   email: z.string(),
   rol: z.enum(["EMPLEADO", "GERENTE", "ADMIN_SISTEMA"]),
+  // Fase 2.20: si la empresa quiere guardar la ubicación al fichar
+  // (solo registro/auditoría — nunca bloquea el fichaje).
+  geolocalizacionFichaje: z.boolean(),
 });
 export type UsuarioProfileDto = z.infer<typeof UsuarioProfileDtoSchema>;
 

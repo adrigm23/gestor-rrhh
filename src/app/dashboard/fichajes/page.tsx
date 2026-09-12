@@ -369,7 +369,7 @@ export default async function FichajesPage({
               <span>{total}</span>
             </div>
             <div className="overflow-x-auto rounded-2xl border border-[color:var(--card-border)]">
-              <table className="min-w-[960px] text-sm">
+              <table className="min-w-[1080px] text-sm">
                 <thead className="bg-[color:var(--surface-muted)] text-xs uppercase tracking-wider text-[color:var(--text-muted)]">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">Empleado</th>
@@ -380,6 +380,7 @@ export default async function FichajesPage({
                     <th className="px-4 py-3 text-left font-semibold">Tipo</th>
                     <th className="px-4 py-3 text-left font-semibold">Estado</th>
                     <th className="px-4 py-3 text-left font-semibold">Editado</th>
+                    <th className="px-4 py-3 text-left font-semibold">Ubicacion</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[color:var(--card-border)]">
@@ -419,6 +420,36 @@ export default async function FichajesPage({
                       </td>
                       <td className="px-4 py-3">
                         {fichaje.editado ? "Si" : "No"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!fichaje.latitud && !fichaje.latitudSalida ? (
+                          <span className="text-xs text-[color:var(--text-muted)]">
+                            Sin ubicacion
+                          </span>
+                        ) : (
+                          <div className="flex flex-col gap-1 text-xs">
+                            {fichaje.latitud !== null && fichaje.longitud !== null && (
+                              <a
+                                href={`https://www.google.com/maps?q=${fichaje.latitud},${fichaje.longitud}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-sky-600 hover:underline"
+                              >
+                                Entrada
+                              </a>
+                            )}
+                            {fichaje.latitudSalida !== null && fichaje.longitudSalida !== null && (
+                              <a
+                                href={`https://www.google.com/maps?q=${fichaje.latitudSalida},${fichaje.longitudSalida}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-sky-600 hover:underline"
+                              >
+                                Salida
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

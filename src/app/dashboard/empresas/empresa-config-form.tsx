@@ -62,9 +62,17 @@ export default function EmpresaConfigForm({
         onChange={(event) => setGeoValue(event.target.value)}
         className="w-full rounded-xl border border-[color:var(--card-border)] bg-[color:var(--surface)] px-2 py-2 text-xs text-[color:var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-sky-200"
       >
-        <option value="false">Sin geolocalizacion</option>
-        <option value="true">Geolocalizacion activa</option>
+        <option value="false">No guardar ubicacion al fichar</option>
+        <option value="true">Guardar ubicacion al fichar</option>
       </select>
+      {/* Fase 2.20: antes decia "Geolocalizacion activa", que sonaba a que
+          se restringia DONDE se puede fichar. No es asi: esto solo guarda
+          la ubicacion (si el dispositivo la da) para poder consultarla
+          despues — nunca bloquea ni exige estar en el centro de trabajo. */}
+      <p className="px-1 text-[10px] leading-snug text-[color:var(--text-muted)]">
+        Solo registra la ubicacion para poder consultarla despues. No impide
+        fichar desde ningun sitio.
+      </p>
       <button
         type="submit"
         disabled={pending}

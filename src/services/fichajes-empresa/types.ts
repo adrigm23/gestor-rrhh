@@ -12,6 +12,14 @@ export interface FichajeEmpresaEntry {
   salida: Date | null;
   tipo: TipoFichaje;
   editado: boolean;
+  // Fase 2.20: coordenadas guardadas al fichar (solo si la empresa tiene
+  // "Guardar ubicación al fichar" activado — ver fichaje/service.ts). El
+  // gerente las usa para abrir la dirección en Google Maps, nunca se
+  // resuelve a texto en el servidor.
+  latitud: number | null;
+  longitud: number | null;
+  latitudSalida: number | null;
+  longitudSalida: number | null;
 }
 
 export interface ListFichajesEmpresaFilters {
